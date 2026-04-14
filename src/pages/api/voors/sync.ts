@@ -324,8 +324,8 @@ async function handleSync(request: Request) {
                     
                     const userFullName = voorsUser.userFullName || voorsUser.Name || voorsUser.full_name || 'Usuário Sem Nome';
 
-                    // Specific user for deep logging (Ana Luiza)
-                    const isUserDebug = userCpfRaw === '06332593300';
+                    // Specific user for deep logging (Ana Luiza, Leidiane)
+                    const isUserDebug = ['06332593300', '02391262388'].includes(userCpfRaw);
 
                     // Build profile data based on mappings
                     const profileData: any = {};
@@ -391,7 +391,7 @@ async function handleSync(request: Request) {
                     }
 
                     // For email fallback if not mapped or empty
-                    const voorsEmail = (voorsUser.email || `voors_${userCpfRaw}@org${orgId}.com`).toLowerCase();
+                    const voorsEmail = (voorsUser.email?.trim() || `voors_${userCpfRaw}@org${orgId}.com`).toLowerCase();
 
                     // 1. Try to find by CPF in our local map
                     let matchedProfile = cpfToProfileMap[userCpfRaw];
@@ -495,7 +495,6 @@ async function handleSync(request: Request) {
                         });
 
                         if (!createUserError && authUser?.user) {
-                            delete profileData.email;
                             profileData.cpf = userCpfRaw;
 
                             // The handle_new_user trigger creates the basic profile.
