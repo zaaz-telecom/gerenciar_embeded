@@ -7,6 +7,8 @@ export const DEFAULT_PERMISSIONS: AppPermissions = {
     indicators: { view: false, create: false, edit: false, delete: false },
     profiles: { view: false, create: false, edit: false, delete: false },
     contracts: { view: false, create: false, edit: false, delete: false },
+    crm: { view: false, create: false, edit: false, delete: false },
+    crm_admin: { view_all: false, manage: false, configure: false },
     organization: { manage_settings: false },
 };
 
@@ -40,6 +42,8 @@ export function mergePermissions(storedPermissions: any): AppPermissions {
         indicators: { ...DEFAULT_PERMISSIONS.indicators, ...storedPermissions.indicators },
         profiles: { ...DEFAULT_PERMISSIONS.profiles, ...storedPermissions.profiles },
         contracts: { ...DEFAULT_PERMISSIONS.contracts, ...storedPermissions.contracts },
+        crm: { ...DEFAULT_PERMISSIONS.crm, ...storedPermissions.crm },
+        crm_admin: { ...DEFAULT_PERMISSIONS.crm_admin, ...storedPermissions.crm_admin },
         organization: { ...DEFAULT_PERMISSIONS.organization, ...storedPermissions.organization },
     };
 }

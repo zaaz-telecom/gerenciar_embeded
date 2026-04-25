@@ -5,12 +5,20 @@ export interface PermissionRules {
     delete: boolean;
 }
 
+export interface CrmAdminPermissions {
+    view_all: boolean;
+    manage: boolean;
+    configure: boolean;
+}
+
 export interface AppPermissions {
     users: PermissionRules;
     processes: PermissionRules;
     indicators: PermissionRules;
     profiles: PermissionRules;
     contracts: PermissionRules;
+    crm: PermissionRules;
+    crm_admin: CrmAdminPermissions;
     organization: {
         manage_settings: boolean;
     };
@@ -22,6 +30,8 @@ export const DEFAULT_PERMISSIONS: AppPermissions = {
     indicators: { view: false, create: false, edit: false, delete: false },
     profiles: { view: false, create: false, edit: false, delete: false },
     contracts: { view: false, create: false, edit: false, delete: false },
+    crm: { view: false, create: false, edit: false, delete: false },
+    crm_admin: { view_all: false, manage: false, configure: false },
     organization: { manage_settings: false },
 };
 

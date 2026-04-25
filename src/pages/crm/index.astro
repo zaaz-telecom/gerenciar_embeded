@@ -1,0 +1,10 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+import CrmSidebar from '../../components/CrmSidebar.astro';
+import CrmDashboard from '../../modules/crm/components/CrmDashboard';
+---
+
+<AppLayout title="CRM | Meu Painel">
+    <CrmSidebar slot="sidebar" activeItem="dashboard" />
+    <CrmDashboard client:only="react" />
+</AppLayout>

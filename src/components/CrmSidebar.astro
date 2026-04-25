@@ -1,0 +1,118 @@
+---
+interface Props {
+    activeItem?: string;
+}
+
+const { activeItem } = Astro.props;
+const currentPath = Astro.url.pathname;
+
+const isActive = (path: string, itemKey?: string) => {
+    if (activeItem && itemKey) return activeItem === itemKey;
+    return currentPath === path || currentPath.startsWith(path + "/");
+};
+
+// Styles for active state
+const activeClasses = "bg-brand/5 text-brand font-semibold border-l-4 border-brand pl-2 -ml-2.5";
+const inactiveClasses = "text-text-secondary hover:bg-gray-100 hover:text-text-primary pl-3";
+---
+
+<div slot="sidebar" class="space-y-4">
+    <!-- Grupo CRM -->
+    <div class="sidebar-group">
+        <button
+            class="w-full flex items-center justify-between cursor-pointer hover:bg-gray-50 rounded-md py-1 group-toggle"
+            aria-expanded="true"
+        >
+            <div
+                class="px-3 text-xs font-semibold text-text-secondary uppercase tracking-wider flex items-center gap-2"
+            >
+                CRM (PAP)
+            </div>
+            <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-3 w-3 text-text-tertiary mr-2 transition-transform duration-200 chevron rotate-180"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+            >
+                <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M19 9l-7 7-7-7"></path>
+            </svg>
+        </button>
+
+        <div
+            class="space-y-1 ml-2 border-l border-gray-200 pl-2 overflow-hidden transition-all duration-300 ease-in-out group-content max-h-[500px] opacity-100"
+        >
+            <a
+                href="/crm"
+                class={`block py-2 text-sm transition-all duration-200 rounded-r-md ${isActive("/crm", "dashboard") ? activeClasses : inactiveClasses}`}
+            >
+                Meu Painel
+            </a>
+            <a
+                href="/crm/nova-venda"
+                class={`block py-2 text-sm transition-all duration-200 rounded-r-md ${isActive("/crm/nova-venda", "nova-venda") ? activeClasses : inactiveClasses}`}
+            >
+                Nova Venda
+            </a>
+            <a
+                href="/crm/gestao"
+                class={`block py-2 text-sm transition-all duration-200 rounded-r-md ${isActive("/crm/gestao", "gestao") ? activeClasses : inactiveClasses}`}
+            >
+                Minhas Vendas
+            </a>
+            <a
+                href="/crm/leads"
+                class={`block py-2 text-sm transition-all duration-200 rounded-r-md ${isActive("/crm/leads", "leads") ? activeClasses : inactiveClasses}`}
+            >
+                Meus Leads
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Group toggle logic identical to AdminSidebar
+    function initSidebar() {
+        const groups = document.querySelectorAll('.sidebar-group');
+        groups.forEach(group => {
+            const toggle = group.querySelector('.group-toggle');
+            const content = group.querySelector('.group-content') as HTMLElement;
+            const chevron = group.querySelector('.chevron');
+            
+            if (toggle && content && chevron) {
+                // Ensure event listener is not added multiple times
+                toggle.removeEventListener('click', toggleHandler);
+                toggle.addEventListener('click', toggleHandler);
+                
+                function toggleHandler(e: Event) {
+                    e.preventDefault();
+                    const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
+                    
+                    if (isExpanded) {
+                        content.style.maxHeight = '0px';
+                        content.style.opacity = '0';
+                        content.style.marginTop = '0';
+                        chevron.classList.remove('rotate-180');
+                        toggle.setAttribute('aria-expanded', 'false');
+                    } else {
+                        content.style.maxHeight = content.scrollHeight + 'px';
+                        content.style.opacity = '1';
+                        content.style.marginTop = '0.25rem';
+                        chevron.classList.add('rotate-180');
+                        toggle.setAttribute('aria-expanded', 'true');
+                    }
+                }
+            }
+        });
+    }
+
+    // Run on initial load
+    initSidebar();
+
+    // Re-run on view transitions
+    document.addEventListener('astro:page-load', initSidebar);
+</script>

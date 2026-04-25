@@ -6,7 +6,7 @@ import { Bell, CheckCircle, Info } from 'lucide-react';
 
 type NotificationItem = {
     id: string;
-    type: 'system_message' | 'process_approval' | 'in_app_alert';
+    type: 'system_message' | 'process_approval' | 'in_app_alert' | 'crm_alert';
     title: string;
     created_at: string;
     read: boolean;
@@ -139,6 +139,35 @@ export const NotificationBell: React.FC = () => {
         // Sort by date desc
         allNotifications.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
+        // 4. Fetch CRM Notifications
+        try {
+            const { data: crmAlerts } = await supabase
+                .from('crm_notifications')
+                .select('*')
+                .eq('user_id', session.user.id)
+                .order('created_at', { ascending: false })
+                .limit(20);
+
+            if (crmAlerts) {
+                crmAlerts.forEach(app => {
+                    allNotifications.push({
+                        id: app.id,
+                        type: 'crm_alert',
+                        title: app.title,
+                        created_at: app.created_at,
+                        read: app.is_read,
+                        data: app,
+                        link: '/crm'
+                    });
+                });
+            }
+        } catch (e) {
+            console.error("Error fetching CRM alerts", e);
+        }
+
+        // Sort again by date desc to include CRM notifications
+        allNotifications.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
         setNotifications(allNotifications);
         setUnreadCount(allNotifications.filter(n => !n.read).length);
     };
@@ -153,6 +182,7 @@ export const NotificationBell: React.FC = () => {
             .on('postgres_changes', { event: '*', schema: 'public', table: 'system_message_reads' }, fetchNotifications)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'process_version_approvers' }, fetchNotifications)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'in_app_notifications' }, fetchNotifications)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'crm_notifications' }, fetchNotifications)
             .subscribe();
 
         return () => {
@@ -169,9 +199,14 @@ export const NotificationBell: React.FC = () => {
             fetchNotifications(); // Optimistic update would be better, but this is safe
         }
 
+        // Mark CRM alert as read
+        if (notification.type === 'crm_alert' && !notification.read) {
+            await supabase.from('crm_notifications').update({ is_read: true }).eq('id', notification.id);
+        }
+
         if (notification.type === 'process_approval' && notification.link) {
             window.location.href = notification.link;
-        } else if (notification.type === 'in_app_alert' && notification.link) {
+        } else if ((notification.type === 'in_app_alert' || notification.type === 'crm_alert') && notification.link) {
             window.location.href = notification.link;
         } else if (notification.type === 'system_message') {
             window.dispatchEvent(

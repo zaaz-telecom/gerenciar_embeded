@@ -222,6 +222,8 @@ export default function RoleForm({ role, isOpen, onClose, onSuccess }: RoleFormP
             indicators: { view: selectAll, create: selectAll, edit: selectAll, delete: selectAll },
             profiles: { view: selectAll, create: selectAll, edit: selectAll, delete: selectAll },
             contracts: { view: selectAll, create: selectAll, edit: selectAll, delete: selectAll },
+            crm: { view: selectAll, create: selectAll, edit: selectAll, delete: selectAll },
+            crm_admin: { view_all: selectAll, manage: selectAll, configure: selectAll },
             organization: { manage_settings: selectAll },
         });
     };
@@ -573,6 +575,74 @@ export default function RoleForm({ role, isOpen, onClose, onSuccess }: RoleFormP
                                                             </tr>
                                                         );
                                                     })}
+                                                    {/* CRM — Vendedor */}
+                                                    <tr className="hover:bg-gray-50/50 transition-colors bg-blue-50/30">
+                                                        <td className="px-4 py-2.5 whitespace-nowrap text-sm font-medium text-gray-900">
+                                                            <span className="mr-1.5">🤝</span>
+                                                            CRM — Vendedor
+                                                        </td>
+                                                        {['view', 'create', 'edit', 'delete'].map((action) => (
+                                                            <td key={action} className="px-3 py-2.5 whitespace-nowrap text-center">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    className="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand cursor-pointer"
+                                                                    checked={(permissions.crm as any)[action]}
+                                                                    onChange={(e) => handlePermissionChange('crm', action, e.target.checked)}
+                                                                />
+                                                            </td>
+                                                        ))}
+                                                        <td className="px-3 py-2.5 text-center">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleSelectAllPermissions('crm', !(permissions.crm.view && permissions.crm.create && permissions.crm.edit && permissions.crm.delete))}
+                                                                className={`text-xs px-2 py-0.5 rounded-full transition-colors ${
+                                                                    permissions.crm.view && permissions.crm.create && permissions.crm.edit && permissions.crm.delete
+                                                                        ? 'bg-green-50 text-green-600 hover:bg-green-100'
+                                                                        : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
+                                                                }`}
+                                                            >
+                                                                {permissions.crm.view && permissions.crm.create && permissions.crm.edit && permissions.crm.delete ? '✓ Todos' : 'Todos'}
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                    {/* CRM — Gestão (BKO/Supervisor) */}
+                                                    <tr className="bg-blue-50/30">
+                                                        <td className="px-4 py-2.5 whitespace-nowrap text-sm font-medium text-gray-900">
+                                                            <span className="mr-1.5">🏢</span>
+                                                            CRM — Gestão
+                                                        </td>
+                                                        <td colSpan={5} className="px-3 py-2.5">
+                                                            <div className="flex items-center gap-6 flex-wrap">
+                                                                <label className="flex items-center gap-2 cursor-pointer">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        className="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand"
+                                                                        checked={permissions.crm_admin.view_all}
+                                                                        onChange={(e) => handlePermissionChange('crm_admin', 'view_all', e.target.checked)}
+                                                                    />
+                                                                    <span className="text-sm text-gray-700">Ver todas as vendas</span>
+                                                                </label>
+                                                                <label className="flex items-center gap-2 cursor-pointer">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        className="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand"
+                                                                        checked={permissions.crm_admin.manage}
+                                                                        onChange={(e) => handlePermissionChange('crm_admin', 'manage', e.target.checked)}
+                                                                    />
+                                                                    <span className="text-sm text-gray-700">Gerenciar vendas (BKO)</span>
+                                                                </label>
+                                                                <label className="flex items-center gap-2 cursor-pointer">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        className="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand"
+                                                                        checked={permissions.crm_admin.configure}
+                                                                        onChange={(e) => handlePermissionChange('crm_admin', 'configure', e.target.checked)}
+                                                                    />
+                                                                    <span className="text-sm text-gray-700">Configurar CRM (planos, cidades)</span>
+                                                                </label>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
                                                     <tr className="bg-gray-50/50">
                                                         <td className="px-4 py-2.5 whitespace-nowrap text-sm font-medium text-gray-900">
                                                             <span className="mr-1.5">⚙️</span>

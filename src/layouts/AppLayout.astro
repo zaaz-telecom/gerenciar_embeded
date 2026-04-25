@@ -74,6 +74,15 @@ const {
                 Dashboards
               </a>
               <a
+                id="nav-crm"
+                href="/crm"
+                class="text-sm font-medium text-text-primary hover:text-brand border-b-2 border-transparent hover:border-brand py-4 transition-colors"
+                title="CRM e Vendas PAP"
+                style="display: none;"
+              >
+                CRM
+              </a>
+              <a
                 id="nav-users"
                 href="/users"
                 class="text-sm font-medium text-text-secondary hover:text-brand border-b-2 border-transparent hover:border-brand py-4 transition-colors"
@@ -293,6 +302,7 @@ const {
             const permsStr = localStorage.getItem("navPermissions");
             if (permsStr) {
               const perms = JSON.parse(permsStr);
+              if (perms.crm) document.getElementById("nav-crm").style.display = "";
               if (perms.users) document.getElementById("nav-users").style.display = "";
               if (perms.indicators) document.getElementById("nav-indicators").style.display = "";
               if (perms.processes) document.getElementById("nav-processes").style.display = "";
@@ -312,7 +322,7 @@ const {
         ) : (
           !disableNav &&
           !hideSidebar && (
-            <aside class="w-64 bg-gray-50/50 border-r border-gray-200 flex flex-col shrink-0">
+            <aside class="hidden md:flex w-64 bg-gray-50/50 border-r border-gray-200 flex flex-col shrink-0">
               <div class="p-4 h-full flex flex-col">
                 <slot name="sidebar">
                   <p class="text-xs text-text-secondary px-2">Menu Principal</p>
@@ -379,6 +389,7 @@ const {
 
           // Nav Items
           const navDashboards = document.getElementById("nav-dashboards");
+          const navCrm = document.getElementById("nav-crm");
           const navUsers = document.getElementById("nav-users");
           const navIndicators = document.getElementById("nav-indicators");
           const navProcesses = document.getElementById("nav-processes");
@@ -399,6 +410,7 @@ const {
           const { hasPermission } = await import("../utils/permissions");
 
           // Update Nav Visibility based on permissions
+          const canViewCrm = hasPermission(permissions, "crm", "view", isOrgAdmin) || hasPermission(permissions, "crm_admin", "view_all", isOrgAdmin);
           const canViewUsers = hasPermission(
             permissions,
             "users",
@@ -424,6 +436,7 @@ const {
             isOrgAdmin,
           );
 
+          if (navCrm) navCrm.style.display = canViewCrm ? "" : "none";
           if (navUsers) navUsers.style.display = canViewUsers ? "" : "none";
           if (navIndicators)
             navIndicators.style.display = canViewIndicators ? "" : "none";
@@ -434,6 +447,7 @@ const {
 
           // Cache permissions to avoid flicker on next load
           localStorage.setItem("navPermissions", JSON.stringify({
+            crm: canViewCrm,
             users: canViewUsers,
             indicators: canViewIndicators,
             processes: canViewProcesses,

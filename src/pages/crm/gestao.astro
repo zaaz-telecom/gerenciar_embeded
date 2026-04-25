@@ -1,0 +1,12 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+import CrmSidebar from '../../components/CrmSidebar.astro';
+import SalesList from '../../modules/crm/components/SalesList';
+---
+
+<AppLayout title="CRM | Gestão BKO">
+    <CrmSidebar slot="sidebar" activeItem="gestao" />
+    <div class="w-full h-full">
+        <SalesList client:only="react" />
+    </div>
+</AppLayout>
