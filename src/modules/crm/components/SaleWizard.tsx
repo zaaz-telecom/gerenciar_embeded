@@ -36,12 +36,50 @@ export default function SaleWizard() {
             const { data: profile } = await supabase.from('profiles').select('organization_id').eq('id', session.user.id).single();
             if (profile) {
                 setOrgId(profile.organization_id);
-                setCities(await fetchCities(profile.organization_id));
-                setStores(await fetchStores(profile.organization_id));
-                setPlans(await fetchPlans(profile.organization_id));
+                const [citiesData, storesData, plansData] = await Promise.all([
+                    fetchCities(profile.organization_id),
+                    fetchStores(profile.organization_id),
+                    fetchPlans(profile.organization_id)
+                ]);
+                setCities(citiesData);
+                setStores(storesData);
+                setPlans(plansData);
+
+
+                // Check for lead conversion
+                const urlParams = new URLSearchParams(window.location.search);
+                const leadId = urlParams.get('leadId');
+                if (leadId) {
+                    const { data: lead, error: leadErr } = await supabase
+                        .from('crm_sales')
+                        .select('*, crm_customers(*)')
+                        .eq('id', leadId)
+                        .single();
+                    
+                    if (lead) {
+                        const customerData = Array.isArray((lead as any).crm_customers) 
+                            ? (lead as any).crm_customers[0] 
+                            : (lead as any).crm_customers;
+                            
+                        const plan = plansData.find(p => p.id === lead.plan_id);
+                        
+                        updateData({
+                            customer_name: customerData?.name || '',
+                            phone_1: customerData?.phone_1 || '',
+                            lead_interest: lead.lead_interest || '',
+                            notes: lead.notes || '',
+                            plan_id: lead.plan_id || '',
+                            technology: plan?.technology || '',
+                            monthly_value: plan ? plan.base_price.toString() : '',
+                            converted_from_lead_id: lead.id
+                        });
+                    }
+                }
             }
         })();
     }, []);
+
+
 
     const updateData = (fields: Partial<SaleWizardData>) => {
         const newFields = { ...fields };
@@ -139,6 +177,15 @@ export default function SaleWizard() {
 
             // 3. Create Sale
             const sale = await createSale(orgId, sellerId, data, customer.id, address.id, 'enviada');
+
+            // 4. If converted from lead, update lead status
+            if (data.converted_from_lead_id) {
+                await supabase
+                    .from('crm_sales')
+                    .update({ status: 'aprovada' }) // Mark lead as processed (or similar)
+                    .eq('id', data.converted_from_lead_id);
+            }
+
 
             // 4. Handle docs here if needed
             

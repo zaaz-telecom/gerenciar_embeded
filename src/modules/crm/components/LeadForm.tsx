@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../lib/supabase';
-import { fetchCities, createLead } from '../service';
-import type { CrmCity } from '../types';
+import { fetchCities, createLead, fetchPlans } from '../service';
+import type { CrmCity, CrmPlan } from '../types';
+
 import { formatPhone } from '../../../utils/formatters';
 
 export default function LeadForm() {
@@ -9,14 +10,18 @@ export default function LeadForm() {
     const [orgId, setOrgId] = useState('');
     const [sellerId, setSellerId] = useState('');
     const [cities, setCities] = useState<CrmCity[]>([]);
+    const [plans, setPlans] = useState<CrmPlan[]>([]);
 
     const [data, setData] = useState({
         customer_name: '',
         phone_1: '',
         city_id: '',
+        plan_id: '',
         lead_interest: '',
+        lead_priority: 'media' as 'baixa' | 'media' | 'alta',
         notes: ''
     });
+
 
     useEffect(() => {
         (async () => {
@@ -26,8 +31,14 @@ export default function LeadForm() {
             const { data: profile } = await supabase.from('profiles').select('organization_id').eq('id', session.user.id).single();
             if (profile) {
                 setOrgId(profile.organization_id);
-                setCities(await fetchCities(profile.organization_id));
+                const [citiesData, plansData] = await Promise.all([
+                    fetchCities(profile.organization_id),
+                    fetchPlans(profile.organization_id)
+                ]);
+                setCities(citiesData);
+                setPlans(plansData);
             }
+
         })();
     }, []);
 
@@ -78,6 +89,21 @@ export default function LeadForm() {
                         />
                     </div>
                     <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Prioridade</label>
+                        <select
+                            className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-brand focus:border-brand"
+                            value={data.lead_priority}
+                            onChange={e => setData(p => ({ ...p, lead_priority: e.target.value as any }))}
+                        >
+                            <option value="baixa">Baixa</option>
+                            <option value="media">Média</option>
+                            <option value="alta">Alta</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Cidade (Opcional)</label>
                         <select
                             className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-brand focus:border-brand"
@@ -88,18 +114,31 @@ export default function LeadForm() {
                             {cities.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </select>
                     </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Plano de Interesse</label>
+                        <select
+                            className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-brand focus:border-brand"
+                            value={data.plan_id}
+                            onChange={e => setData(p => ({ ...p, plan_id: e.target.value }))}
+                        >
+                            <option value="">Selecione um plano...</option>
+                            {plans.map(p => <option key={p.id} value={p.id}>{p.name} - R$ {p.monthly_value}</option>)}
+                        </select>
+                    </div>
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Nível de Interesse / Produto</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Outros Interesses / Detalhes</label>
                     <input
                         type="text"
                         className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-brand focus:border-brand"
-                        placeholder="Ex: Muito interessado na Fibra 500MB"
+                        placeholder="Ex: Quer instalar no final de semana"
                         value={data.lead_interest}
                         onChange={e => setData(p => ({ ...p, lead_interest: e.target.value }))}
                     />
                 </div>
+
+
 
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Observações Gerais</label>

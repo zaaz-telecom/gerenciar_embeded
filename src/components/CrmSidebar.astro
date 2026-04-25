@@ -59,17 +59,24 @@ const inactiveClasses = "text-text-secondary hover:bg-gray-100 hover:text-text-p
                 Nova Venda
             </a>
             <a
-                href="/crm/gestao"
-                class={`block py-2 text-sm transition-all duration-200 rounded-r-md ${isActive("/crm/gestao", "gestao") ? activeClasses : inactiveClasses}`}
+                href="/crm?tab=leads"
+                class={`block py-2 text-sm transition-all duration-200 rounded-r-md ${isActive("/crm?tab=leads", "leads") ? activeClasses : inactiveClasses}`}
             >
-                Minhas Vendas
+                Listagem de Leads
             </a>
             <a
                 href="/crm/leads"
-                class={`block py-2 text-sm transition-all duration-200 rounded-r-md ${isActive("/crm/leads", "leads") ? activeClasses : inactiveClasses}`}
+                class={`block py-2 text-sm transition-all duration-200 rounded-r-md ${isActive("/crm/leads", "novo-lead") ? activeClasses : inactiveClasses}`}
             >
-                Meus Leads
+                Registrar Lead
             </a>
+            <a
+                href="/crm/gestao"
+                class={`block py-2 text-sm transition-all duration-200 rounded-r-md ${isActive("/crm/gestao", "gestao") ? activeClasses : inactiveClasses}`}
+            >
+                Acompanhamento
+            </a>
+
         </div>
     </div>
 </div>

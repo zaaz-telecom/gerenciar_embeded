@@ -90,7 +90,9 @@ export async function createSale(
             installation_period: wizardData.installation_period || null,
             needs_extra_router: wizardData.needs_extra_router,
             needs_portability: wizardData.needs_portability,
+            converted_from_lead_id: wizardData.converted_from_lead_id || null,
         })
+
         .select()
         .single();
     if (error) throw error;
@@ -110,6 +112,8 @@ export async function createLead(
         city_id?: string;
         city_name?: string;
         lead_interest?: string;
+        lead_priority?: 'baixa' | 'media' | 'alta';
+        plan_id?: string;
         notes?: string;
     }
 ): Promise<CrmSale> {
@@ -131,18 +135,22 @@ export async function createLead(
         .insert({
             organization_id: orgId,
             type: 'lead',
-            status: 'enviada',
+            status: 'rascunho',
             seller_id: sellerId,
             customer_id: customer.id,
             lead_interest: payload.lead_interest || null,
+            lead_priority: payload.lead_priority || 'media',
+            plan_id: payload.plan_id || null,
             notes: payload.notes || null,
         })
+
         .select()
         .single();
     if (error) throw error;
-    await logStatusChange(data.id, sellerId, null, 'enviada');
+    await logStatusChange(data.id, sellerId, null, 'rascunho');
     return data;
 }
+
 
 export async function fetchMySales(sellerId: string): Promise<CrmSale[]> {
     const { data, error } = await supabase

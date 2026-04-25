@@ -1,5 +1,5 @@
 // CRM Module Types
-export type SaleStatus = 'rascunho' | 'enviada' | 'em_validacao' | 'aprovada' | 'instalada' | 'cancelada';
+export type SaleStatus = 'rascunho' | 'contato_inicial' | 'viabilidade_ok' | 'enviada' | 'em_validacao' | 'aprovada' | 'instalada' | 'cancelada';
 export type SaleType = 'lead' | 'adesao';
 export type Technology = 'fibra' | 'radio' | 'iptv';
 export type DueDay = 5 | 10 | 15 | 20 | 25;
@@ -119,6 +119,8 @@ export interface CrmSale {
     sale_date?: string;
     notes?: string;
     lead_interest?: string;
+    lead_priority?: 'baixa' | 'media' | 'alta';
+    last_contact_at?: string;
     mk_contract_id?: string;
     mk_os_id?: string;
     bko_user_id?: string;
@@ -127,6 +129,7 @@ export interface CrmSale {
     created_at: string;
     updated_at: string;
 }
+
 
 export interface CrmStatusLog {
     id: string;
@@ -211,9 +214,10 @@ export interface SaleWizardData {
     needs_extra_router: boolean;
     needs_portability: boolean;
     // Step 6: Documents
-    id_document_file?: File;
     address_photo_file?: File;
+    converted_from_lead_id?: string;
 }
+
 
 export const INITIAL_WIZARD_DATA: SaleWizardData = {
     cpf_cnpj: '',
@@ -245,6 +249,8 @@ export const INITIAL_WIZARD_DATA: SaleWizardData = {
     notes: '',
     competitor: '',
     lead_source: '',
+    converted_from_lead_id: undefined,
+
     installation_period: '',
     needs_extra_router: false,
     needs_portability: false,
@@ -252,6 +258,8 @@ export const INITIAL_WIZARD_DATA: SaleWizardData = {
 
 export const STATUS_LABELS: Record<SaleStatus, string> = {
     rascunho: 'Rascunho',
+    contato_inicial: 'Contato Inicial',
+    viabilidade_ok: 'Viabilidade OK',
     enviada: 'Enviada',
     em_validacao: 'Em Validação',
     aprovada: 'Aprovada',
@@ -261,12 +269,15 @@ export const STATUS_LABELS: Record<SaleStatus, string> = {
 
 export const STATUS_COLORS: Record<SaleStatus, string> = {
     rascunho: 'bg-gray-100 text-gray-600',
+    contato_inicial: 'bg-indigo-100 text-indigo-700',
+    viabilidade_ok: 'bg-cyan-100 text-cyan-700',
     enviada: 'bg-blue-100 text-blue-700',
     em_validacao: 'bg-amber-100 text-amber-700',
     aprovada: 'bg-green-100 text-green-700',
     instalada: 'bg-emerald-100 text-emerald-800',
     cancelada: 'bg-red-100 text-red-700',
 };
+
 
 export const TECHNOLOGY_LABELS: Record<Technology, string> = {
     fibra: 'Fibra Óptica',
