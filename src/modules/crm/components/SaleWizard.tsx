@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../lib/supabase';
-import { fetchCities, fetchPlans, fetchStores, fetchAddressByCep, searchCustomerByCpf, upsertCustomer, createAddress, createSale, saveDraftLocally } from '../service';
+import { fetchCities, fetchPlans, fetchStores, fetchAddressByCep, searchCustomerByCpf, upsertCustomer, createAddress, createSale, saveDraftLocally, createLead } from '../service';
 import type { CrmCity, CrmPlan, CrmStore, SaleWizardData, Technology } from '../types';
 import { INITIAL_WIZARD_DATA, TECHNOLOGY_LABELS } from '../types';
 import { formatCpfCnpj, formatPhone, formatCep } from '../../../utils/formatters';
 import { isValidCpfCnpj } from '../../../utils/validators';
 
 const STEPS = [
+    { id: 'lead', title: 'Contato Inicial' },
     { id: 'search', title: 'Busca Cliente' },
     { id: 'data', title: 'Dados' },
     { id: 'address', title: 'Endereço' },
@@ -20,6 +21,7 @@ export default function SaleWizard() {
     const [currentStep, setCurrentStep] = useState(0);
     const [data, setData] = useState<SaleWizardData>(INITIAL_WIZARD_DATA);
     const [loading, setLoading] = useState(false);
+    const [formError, setFormError] = useState('');
     const [orgId, setOrgId] = useState('');
     const [sellerId, setSellerId] = useState('');
     
@@ -90,8 +92,49 @@ export default function SaleWizard() {
         setData(prev => ({ ...prev, ...newFields }));
     };
 
-    const handleNext = () => setCurrentStep(p => Math.min(STEPS.length - 1, p + 1));
-    const handlePrev = () => setCurrentStep(p => Math.max(0, p - 1));
+    const handleNext = async () => {
+        setFormError('');
+        if (currentStep === 0) {
+            if (!data.customer_name || !data.phone_1) {
+                setFormError('Por favor, preencha Nome e Telefone do contato.');
+                return;
+            }
+        }
+        
+        if (currentStep === 1) {
+            const cleanCpf = data.cpf_cnpj.replace(/\D/g, '');
+            if (cleanCpf.length < 11) {
+                setFormError('Por favor, informe o CPF/CNPJ completo.');
+                return;
+            }
+            if (!isValidCpfCnpj(data.cpf_cnpj)) {
+                setFormError('O CPF/CNPJ informado não é válido. Verifique os números e tente novamente.');
+                return;
+            }
+            // Realiza a busca automática se o usuário apenas clicar em continuar
+            setLoading(true);
+            const existing = await searchCustomerByCpf(cleanCpf, orgId);
+            if (existing) {
+                updateData({
+                    existingCustomerId: existing.id,
+                    customer_name: existing.name,
+                    birth_date: existing.birth_date || '',
+                    parent_name: existing.parent_name || '',
+                    phone_1: existing.phone_1 || data.phone_1,
+                    phone_2: existing.phone_2 || '',
+                    email: existing.email || '',
+                });
+            }
+            setLoading(false);
+        }
+
+        setCurrentStep(p => Math.min(STEPS.length - 1, p + 1));
+    };
+
+    const handlePrev = () => {
+        setFormError('');
+        setCurrentStep(p => Math.max(0, p - 1));
+    };
 
     const handleCepSearch = async () => {
         const cleanCep = data.zip_code.replace(/\D/g, '');
@@ -123,10 +166,11 @@ export default function SaleWizard() {
     };
 
     const handleCpfSearch = async () => {
+        setFormError('');
         const cleanCpf = data.cpf_cnpj.replace(/\D/g, '');
         if (cleanCpf.length >= 11 && orgId) {
             if (!isValidCpfCnpj(data.cpf_cnpj)) {
-                alert('O CPF/CNPJ informado não é válido.');
+                setFormError('O CPF/CNPJ informado não é válido.');
                 return;
             }
             setLoading(true);
@@ -198,6 +242,34 @@ export default function SaleWizard() {
         }
     };
 
+    const handleSaveLead = async () => {
+        setFormError('');
+        if (!orgId || !sellerId) return;
+        if (!data.customer_name || !data.phone_1) {
+            setFormError('Por favor, preencha o Nome e Telefone do contato.');
+            return;
+        }
+        setLoading(true);
+        try {
+            await createLead(orgId, sellerId, {
+                customer_name: data.customer_name,
+                phone_1: data.phone_1,
+                city_id: data.city_id || undefined,
+                city_name: data.city_id ? cities.find(c => c.id === data.city_id)?.name : undefined,
+                lead_interest: data.lead_interest || undefined,
+                lead_priority: data.lead_priority || 'media',
+                plan_id: data.plan_id || undefined,
+                notes: data.notes || undefined,
+            });
+            alert('Lead salvo com sucesso!');
+            window.location.href = '/crm';
+        } catch (e: any) {
+            alert('Erro ao salvar lead: ' + e.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleWhatsappShare = () => {
         const plan = plans.find(p => p.id === data.plan_id);
         const text = `*Resumo da sua Solicitação - TatuTec*\n\n` +
@@ -249,6 +321,100 @@ export default function SaleWizard() {
             <div className="py-4">
                 {currentStep === 0 && (
                     <div className="space-y-4">
+                        <h2 className="text-xl font-bold text-gray-900">Contato Inicial (Lead)</h2>
+                        <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl mb-4">
+                            <p className="text-sm text-blue-800">
+                                Preencha os dados iniciais. Se o cliente estiver com pressa, você pode salvar apenas como <strong>Lead</strong> agora e continuar a venda depois.
+                            </p>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Nome do Contato *</label>
+                            <input
+                                type="text"
+                                required
+                                className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-brand focus:border-brand"
+                                value={data.customer_name}
+                                onChange={e => updateData({ customer_name: e.target.value })}
+                            />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">WhatsApp/Telefone *</label>
+                                <input
+                                    type="text"
+                                    required
+                                    className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-brand focus:border-brand"
+                                    value={data.phone_1}
+                                    onChange={e => updateData({ phone_1: e.target.value })}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Prioridade</label>
+                                <select
+                                    className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-brand focus:border-brand"
+                                    value={data.lead_priority}
+                                    onChange={e => updateData({ lead_priority: e.target.value as any })}
+                                >
+                                    <option value="baixa">Baixa</option>
+                                    <option value="media">Média</option>
+                                    <option value="alta">Alta</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Cidade (Opcional)</label>
+                                <select
+                                    className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-brand focus:border-brand"
+                                    value={data.city_id}
+                                    onChange={e => updateData({ city_id: e.target.value })}
+                                >
+                                    <option value="">Selecione...</option>
+                                    {cities.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Plano de Interesse</label>
+                                <select
+                                    className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-brand focus:border-brand"
+                                    value={data.plan_id}
+                                    onChange={e => {
+                                        const selectedPlan = plans.find(p => p.id === e.target.value);
+                                        updateData({ 
+                                            plan_id: e.target.value,
+                                            monthly_value: selectedPlan ? selectedPlan.base_price.toString() : ''
+                                        });
+                                    }}
+                                >
+                                    <option value="">Selecione um plano...</option>
+                                    {plans.map(p => <option key={p.id} value={p.id}>{p.name} - R$ {p.base_price}</option>)}
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Outros Interesses / Detalhes</label>
+                            <input
+                                type="text"
+                                className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-brand focus:border-brand"
+                                placeholder="Ex: Quer instalar no final de semana"
+                                value={data.lead_interest}
+                                onChange={e => updateData({ lead_interest: e.target.value })}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Observações Gerais</label>
+                            <textarea
+                                className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-brand focus:border-brand"
+                                rows={3}
+                                value={data.notes}
+                                onChange={e => updateData({ notes: e.target.value })}
+                            />
+                        </div>
+                    </div>
+                )}
+
+                {currentStep === 1 && (
+                    <div className="space-y-4">
                         <h2 className="text-xl font-bold text-gray-900">Buscar Cliente</h2>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">CPF/CNPJ</label>
@@ -272,17 +438,28 @@ export default function SaleWizard() {
                     </div>
                 )}
 
-                {currentStep === 1 && (
+                {currentStep === 2 && (
                     <div className="space-y-4">
                         <h2 className="text-xl font-bold text-gray-900">Dados do Cliente</h2>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Nome Completo *</label>
-                            <input
-                                type="text"
-                                className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-brand focus:border-brand"
-                                value={data.customer_name}
-                                onChange={e => updateData({ customer_name: e.target.value })}
-                            />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Nome Completo *</label>
+                                <input
+                                    type="text"
+                                    className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-brand focus:border-brand"
+                                    value={data.customer_name}
+                                    onChange={e => updateData({ customer_name: e.target.value })}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">RG</label>
+                                <input
+                                    type="text"
+                                    className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-brand focus:border-brand"
+                                    value={data.rg || ''}
+                                    onChange={e => updateData({ rg: e.target.value })}
+                                />
+                            </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div>
@@ -316,7 +493,7 @@ export default function SaleWizard() {
                     </div>
                 )}
 
-                {currentStep === 2 && (
+                {currentStep === 3 && (
                     <div className="space-y-4">
                         <h2 className="text-xl font-bold text-gray-900">Endereço de Instalação</h2>
                         <div className="flex gap-2">
@@ -382,10 +559,21 @@ export default function SaleWizard() {
                                 />
                             </div>
                         </div>
+                        <div className="mt-4">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Loja/Operação</label>
+                            <select 
+                                className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-brand focus:border-brand"
+                                value={data.store_id}
+                                onChange={e => updateData({ store_id: e.target.value })}
+                            >
+                                <option value="">Selecione...</option>
+                                {stores.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                            </select>
+                        </div>
                     </div>
                 )}
 
-                {currentStep === 3 && (
+                {currentStep === 4 && (
                     <div className="space-y-4">
                         <h2 className="text-xl font-bold text-gray-900">Configuração do Plano</h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -423,22 +611,10 @@ export default function SaleWizard() {
                     </div>
                 )}
 
-                {currentStep === 4 && (
+                {currentStep === 5 && (
                     <div className="space-y-4">
                         <h2 className="text-xl font-bold text-gray-900">Detalhes Comerciais</h2>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Venda</label>
-                                <select 
-                                    className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-brand focus:border-brand"
-                                    value={data.sale_type}
-                                    onChange={e => updateData({ sale_type: e.target.value as any })}
-                                >
-                                    <option value="">Selecione...</option>
-                                    <option value="adesao">Nova Adesão</option>
-                                    <option value="troca_plano">Troca de Plano</option>
-                                </select>
-                            </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Vencimento</label>
                                 <select 
@@ -448,19 +624,6 @@ export default function SaleWizard() {
                                 >
                                     <option value="">Selecione...</option>
                                     {[5,10,15,20,25].map(d => <option key={d} value={d}>Dia {d}</option>)}
-                                </select>
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Loja/Operação</label>
-                                <select 
-                                    className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-brand focus:border-brand"
-                                    value={data.store_id}
-                                    onChange={e => updateData({ store_id: e.target.value })}
-                                >
-                                    <option value="">Selecione...</option>
-                                    {stores.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                                 </select>
                             </div>
                             <div>
@@ -559,17 +722,41 @@ export default function SaleWizard() {
                     </div>
                 )}
 
-                {currentStep === 5 && (
-                    <div className="space-y-4">
+                {currentStep === 6 && (
+                    <div className="space-y-6">
                         <h2 className="text-xl font-bold text-gray-900">Upload de Documentos</h2>
-                        <p className="text-sm text-gray-500 mb-4">Em breve: envio de fotos e PDFs da documentação (v2).</p>
-                        <div className="p-8 border-2 border-dashed border-gray-300 rounded-xl text-center bg-gray-50">
-                            <span className="text-gray-400">Pular etapa por enquanto...</span>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="border border-gray-200 rounded-xl p-4 bg-gray-50">
+                                <label className="block text-sm font-medium text-gray-900 mb-2">RG / CNH</label>
+                                <input
+                                    type="file"
+                                    accept="image/*,.pdf"
+                                    className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-brand/10 file:text-brand hover:file:bg-brand/20"
+                                    onChange={e => {
+                                        const file = e.target.files?.[0];
+                                        if (file) updateData({ document_photo_file: file });
+                                    }}
+                                />
+                                <p className="text-xs text-gray-500 mt-2">Envie a foto frente e verso do documento de identificação.</p>
+                            </div>
+                            <div className="border border-gray-200 rounded-xl p-4 bg-gray-50">
+                                <label className="block text-sm font-medium text-gray-900 mb-2">Comprovante de Residência</label>
+                                <input
+                                    type="file"
+                                    accept="image/*,.pdf"
+                                    className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-brand/10 file:text-brand hover:file:bg-brand/20"
+                                    onChange={e => {
+                                        const file = e.target.files?.[0];
+                                        if (file) updateData({ address_photo_file: file });
+                                    }}
+                                />
+                                <p className="text-xs text-gray-500 mt-2">Envie uma conta de luz, água ou fatura recente.</p>
+                            </div>
                         </div>
                     </div>
                 )}
 
-                {currentStep === 6 && (
+                {currentStep === 7 && (
                     <div className="space-y-6">
                         <h2 className="text-xl font-bold text-gray-900">Revisão Final</h2>
                         <div className="bg-gray-50 rounded-xl p-4 text-sm space-y-3 border border-gray-200">
@@ -600,15 +787,24 @@ export default function SaleWizard() {
                 )}
             </div>
 
+            {formError && (
+                <div className="mt-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm font-medium flex items-center gap-2">
+                    <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    {formError}
+                </div>
+            )}
+
             {/* Actions */}
-            <div className="mt-8 flex items-center justify-between pt-4 border-t border-gray-100">
+            <div className="mt-6 flex items-center justify-between pt-4 border-t border-gray-100">
                 <button
                     onClick={saveDraft}
-                    className="text-sm font-medium text-gray-500 hover:text-gray-700 px-4 py-2 hover:bg-gray-100 rounded-lg transition-colors"
+                    className="text-sm font-medium text-gray-500 hover:text-gray-700 px-4 py-2 hover:bg-gray-100 rounded-lg transition-colors hidden sm:block"
                 >
                     Salvar Rascunho
                 </button>
-                <div className="flex gap-2">
+                <div className="flex gap-2 w-full sm:w-auto justify-end flex-wrap">
                     {currentStep > 0 && (
                         <button
                             onClick={handlePrev}
@@ -617,12 +813,23 @@ export default function SaleWizard() {
                             Voltar
                         </button>
                     )}
+                    
+                    {currentStep === 0 && (
+                        <button
+                            onClick={handleSaveLead}
+                            disabled={loading}
+                            className="px-6 py-2 bg-slate-800 text-white font-medium rounded-lg hover:bg-slate-700 transition-colors shadow-sm disabled:opacity-50"
+                        >
+                            {loading ? 'Salvando...' : 'Salvar Apenas como Lead'}
+                        </button>
+                    )}
+
                     {currentStep < STEPS.length - 1 ? (
                         <button
                             onClick={handleNext}
                             className="px-6 py-2 bg-brand text-white font-medium rounded-lg hover:bg-brand/90 transition-colors shadow-sm"
                         >
-                            Continuar
+                            {currentStep === 0 ? 'Continuar Venda' : 'Continuar'}
                         </button>
                     ) : (
                         <button

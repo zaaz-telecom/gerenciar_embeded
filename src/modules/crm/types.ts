@@ -180,6 +180,7 @@ export interface SaleWizardData {
     existingCustomerId?: string;
     // Step 2: Customer Data
     customer_name: string;
+    rg: string;
     birth_date: string;
     parent_name: string;
     phone_1: string;
@@ -214,13 +215,18 @@ export interface SaleWizardData {
     needs_extra_router: boolean;
     needs_portability: boolean;
     // Step 6: Documents
+    document_photo_file?: File;
     address_photo_file?: File;
     converted_from_lead_id?: string;
+    // Lead Fields
+    lead_priority: 'baixa' | 'media' | 'alta';
+    lead_interest: string;
 }
 
 
 export const INITIAL_WIZARD_DATA: SaleWizardData = {
     cpf_cnpj: '',
+    rg: '',
     customer_name: '',
     birth_date: '',
     parent_name: '',
@@ -254,6 +260,9 @@ export const INITIAL_WIZARD_DATA: SaleWizardData = {
     installation_period: '',
     needs_extra_router: false,
     needs_portability: false,
+    
+    lead_priority: 'media',
+    lead_interest: '',
 };
 
 export const STATUS_LABELS: Record<SaleStatus, string> = {

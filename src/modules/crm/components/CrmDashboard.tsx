@@ -14,6 +14,7 @@ import {
   CheckCircle,
   AlertCircle,
   ChevronRight,
+  ChevronLeft,
   Filter,
   DollarSign,
   Briefcase,
@@ -36,6 +37,12 @@ export default function CrmDashboard() {
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<TabType>('ativas');
     const [searchTerm, setSearchTerm] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [activeTab, searchTerm]);
 
     useEffect(() => {
         (async () => {
@@ -98,6 +105,13 @@ export default function CrmDashboard() {
         
         return { ativas, aguardandoInstalacao, leads, hotLeads, valorTotal };
     }, [sales]);
+
+    const paginatedSales = useMemo(() => {
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        return filteredSales.slice(startIndex, startIndex + itemsPerPage);
+    }, [filteredSales, currentPage]);
+
+    const totalPages = Math.ceil(filteredSales.length / itemsPerPage);
 
     if (loading) return (
         <div className="flex flex-col items-center justify-center h-[60vh] gap-4">
@@ -188,7 +202,7 @@ export default function CrmDashboard() {
                             />
                         </div>
                         
-                        <div className="flex p-1.5 bg-slate-100 rounded-2xl min-w-[300px]">
+                        <div className="flex p-1.5 bg-slate-100 rounded-2xl w-full md:w-auto">
                             {(['ativas', 'leads', 'historico'] as const).map((tab) => (
                                 <button
                                     key={tab}
@@ -220,152 +234,136 @@ export default function CrmDashboard() {
                         </div>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        {filteredSales.map((sale) => {
+                    <div className="flex flex-col gap-4">
+                        {paginatedSales.map((sale) => {
                             const hot = isHotLead(sale);
                             return (
-                                <div key={sale.id} className={`group bg-white border ${hot ? 'border-orange-200 shadow-orange-100/50' : 'border-slate-200/60'} rounded-[2.5rem] p-6 shadow-sm hover:shadow-xl hover:border-brand/20 transition-all duration-300 relative overflow-hidden`}>
+                                <div key={sale.id} className={`group bg-white border ${hot ? 'border-orange-200 shadow-orange-100/50' : 'border-slate-200/60'} rounded-2xl p-4 md:p-5 shadow-sm hover:shadow-md hover:border-brand/20 transition-all duration-300 relative overflow-hidden flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between`}>
                                     {/* Card Glass Highlight */}
-                                    <div className={`absolute top-0 right-0 w-32 h-32 ${hot ? 'bg-orange-50' : 'bg-slate-50'} rounded-full blur-3xl -mr-16 -mt-16 opacity-50 group-hover:bg-brand/5 transition-colors`} />
+                                    <div className={`absolute top-0 right-0 w-32 h-32 ${hot ? 'bg-orange-50' : 'bg-slate-50'} rounded-full blur-3xl -mr-16 -mt-16 opacity-50 group-hover:bg-brand/5 transition-colors pointer-events-none`} />
                                     
-                                    {hot && (
-                                        <div className="absolute top-6 right-16 flex items-center gap-1 bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest animate-pulse z-20">
-                                            <Flame size={12} />
-                                            Quente
+                                    {/* Client Info */}
+                                    <div className="relative z-10 flex-1 min-w-0 w-full lg:w-auto">
+                                        <div className="flex items-center gap-2 mb-1.5">
+                                            {hot && (
+                                                <span className="flex items-center gap-1 bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest animate-pulse">
+                                                    <Flame size={12} /> Quente
+                                                </span>
+                                            )}
+                                            <h3 className="text-lg font-black text-slate-900 truncate group-hover:text-brand transition-colors">
+                                                {(sale.customer as any)?.name || 'Cliente Sem Nome'}
+                                            </h3>
                                         </div>
-                                    )}
-
-                                    <div className="relative z-10">
-                                        <div className="flex justify-between items-start mb-6">
-                                            <div className="min-w-0 flex-1 pr-4">
-                                                <h3 className="text-xl font-black text-slate-900 truncate tracking-tight group-hover:text-brand transition-colors">
-                                                    {(sale.customer as any)?.name || 'Cliente Sem Nome'}
-                                                </h3>
-                                                <div className="flex items-center gap-3 mt-2">
-                                                    <StatusBadge status={sale.status} />
-                                                    <span className="text-[10px] font-black text-slate-400 bg-slate-50 px-2 py-1 rounded-md uppercase tracking-wider">
-                                                        ID: {sale.id.slice(0, 8)}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <div className="w-10 h-10 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-300 group-hover:bg-brand/10 group-hover:text-brand transition-all">
-                                                <ChevronRight size={24} />
-                                            </div>
-                                        </div>
-
-                                        {/* Sales Tip / Suggestion */}
-                                        {sale.type === 'lead' && (
-                                            <div className="mb-6 bg-slate-50 border border-slate-100 rounded-2xl p-4 flex gap-3 items-start">
-                                                <div className="bg-amber-100 p-1.5 rounded-lg text-amber-700 shrink-0">
-                                                    <Lightbulb size={16} />
-                                                </div>
-                                                <div className="space-y-1">
-                                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Dica de Abordagem</p>
-                                                    <p className="text-xs text-slate-600 font-medium italic">
-                                                        {hot 
-                                                            ? "Gatilho de Urgência: 'Temos técnicos na região agora, podemos instalar ainda hoje!'" 
-                                                            : "Gatilho de Prova Social: 'Muitos vizinhos no bairro já migraram para nossa Fibra.'"}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        <div className="grid grid-cols-2 gap-6 mb-8">
-                                            <div className="space-y-4">
-                                                <div className="flex items-center gap-3 text-slate-600">
-                                                    <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center">
-                                                        <Clock size={16} className="text-slate-400" />
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter leading-none mb-1">Criado em</p>
-                                                        <p className="text-sm font-bold">{new Date(sale.created_at).toLocaleDateString('pt-BR')}</p>
-                                                    </div>
-                                                </div>
-
-                                                {sale.monthly_value && (
-                                                    <div className="flex items-center gap-3 text-brand">
-                                                        <div className="w-8 h-8 rounded-xl bg-brand/5 flex items-center justify-center">
-                                                            <DollarSign size={16} />
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-[10px] font-black text-brand/60 uppercase tracking-tighter leading-none mb-1">Valor Mensal</p>
-                                                            <p className="text-sm font-black">{formatCurrency(Number(sale.monthly_value))}</p>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            <div className="space-y-4">
-                                                {sale.plan && (
-                                                    <div className="flex items-center gap-3 text-slate-600">
-                                                        <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center">
-                                                            <Search size={16} className="text-slate-400" />
-                                                        </div>
-                                                        <div className="min-w-0">
-                                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter leading-none mb-1">Produto</p>
-                                                            <p className="text-sm font-bold truncate">{(sale.plan as any).name}</p>
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                {sale.address && (
-                                                    <div className="flex items-center gap-3 text-slate-600">
-                                                        <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center">
-                                                            <MapPin size={16} className="text-slate-400" />
-                                                        </div>
-                                                        <div className="min-w-0">
-                                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter leading-none mb-1">Localização</p>
-                                                            <p className="text-sm font-bold truncate">{(sale.address as any).neighborhood}</p>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        {/* Action Grid */}
-                                        <div className="grid grid-cols-3 gap-3">
-                                            <a 
-                                                href={`tel:${(sale.customer as any)?.phone_1}`}
-                                                className="flex flex-col items-center justify-center gap-2 bg-slate-50 text-slate-700 py-4 rounded-[1.5rem] hover:bg-slate-100 transition-colors group/btn"
-                                            >
-                                                <Phone size={18} className="group-hover/btn:scale-110 transition-transform" />
-                                                <span className="text-[10px] font-black uppercase tracking-widest">Ligar</span>
-                                            </a>
-                                            <a 
-                                                href={`https://wa.me/55${(sale.customer as any)?.phone_1?.replace(/\D/g, '')}`}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="flex flex-col items-center justify-center gap-2 bg-emerald-50 text-emerald-700 py-4 rounded-[1.5rem] hover:bg-emerald-100 transition-colors group/btn"
-                                            >
-                                                <MessageCircle size={18} className="group-hover/btn:scale-110 transition-transform" />
-                                                <span className="text-[10px] font-black uppercase tracking-widest">WhatsApp</span>
-                                            </a>
-                                            {sale.type === 'lead' ? (
-                                                <a 
-                                                    href={`/crm/nova-venda?leadId=${sale.id}`}
-                                                    className="flex flex-col items-center justify-center gap-2 bg-brand text-white py-4 rounded-[1.5rem] hover:bg-brand/90 transition-all shadow-md hover:shadow-brand/20 group/btn"
-                                                >
-                                                    <Zap size={18} className="group-hover/btn:scale-110 transition-transform fill-current" />
-                                                    <span className="text-[10px] font-black uppercase tracking-widest">Converter</span>
-                                                </a>
-                                            ) : (
-                                                sale.address && (
-                                                    <a 
-                                                        href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${(sale.address as any).street}, ${(sale.address as any).number}, ${(sale.address as any).neighborhood}, ${(sale.address as any).city_name}`)}`}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="flex flex-col items-center justify-center gap-2 bg-blue-50 text-blue-700 py-4 rounded-[1.5rem] hover:bg-blue-100 transition-colors group/btn"
-                                                    >
-                                                        <MapPin size={18} className="group-hover/btn:scale-110 transition-transform" />
-                                                        <span className="text-[10px] font-black uppercase tracking-widest">Rota</span>
-                                                    </a>
-                                                )
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <StatusBadge status={sale.status} />
+                                            <span className="text-[10px] font-black text-slate-400 bg-slate-50 px-2 py-1 rounded-md uppercase tracking-wider border border-slate-100">
+                                                ID: {sale.id.slice(0, 8)}
+                                            </span>
+                                            {sale.type === 'lead' && (
+                                                <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-1 rounded-md max-w-full truncate flex items-center border border-amber-100/50" title={hot ? "Gatilho de Urgência..." : "Gatilho de Prova Social..."}>
+                                                    <Lightbulb size={12} className="inline mr-1 shrink-0" />
+                                                    <span className="truncate">{hot ? "Urgência: Podem instalar hoje!" : "Prova Social: Vizinhos já migraram."}</span>
+                                                </span>
                                             )}
                                         </div>
+                                    </div>
+
+                                    {/* Details Grid */}
+                                    <div className="relative z-10 flex-none grid grid-cols-2 md:flex md:flex-row md:items-center gap-4 w-full lg:w-auto text-sm md:divide-x md:divide-slate-100">
+                                        <div className="md:px-4">
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter mb-0.5 flex items-center gap-1"><Clock size={10}/> Criado em</p>
+                                            <p className="font-bold text-slate-700">{new Date(sale.created_at).toLocaleDateString('pt-BR')}</p>
+                                        </div>
+                                        {sale.monthly_value && (
+                                            <div className="md:px-4">
+                                                <p className="text-[10px] font-black text-brand/60 uppercase tracking-tighter mb-0.5 flex items-center gap-1"><DollarSign size={10}/> Valor</p>
+                                                <p className="font-bold text-brand">{formatCurrency(Number(sale.monthly_value))}</p>
+                                            </div>
+                                        )}
+                                        {sale.plan && (
+                                            <div className="md:px-4">
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter mb-0.5 flex items-center gap-1"><Search size={10}/> Produto</p>
+                                                <p className="font-bold text-slate-700 truncate max-w-[120px]" title={(sale.plan as any).name}>{(sale.plan as any).name}</p>
+                                            </div>
+                                        )}
+                                        {sale.address && (
+                                            <div className="md:px-4">
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter mb-0.5 flex items-center gap-1"><MapPin size={10}/> Bairro</p>
+                                                <p className="font-bold text-slate-700 truncate max-w-[120px]" title={(sale.address as any).neighborhood}>{(sale.address as any).neighborhood}</p>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Actions Grid */}
+                                    <div className="relative z-10 flex-none flex items-center gap-2 w-full lg:w-auto pt-2 lg:pt-0 border-t border-slate-100 lg:border-t-0 mt-2 lg:mt-0 lg:pl-2">
+                                        <a href={`tel:${(sale.customer as any)?.phone_1}`} className="flex-1 lg:flex-none p-2.5 bg-slate-50 text-slate-600 rounded-xl hover:bg-slate-100 hover:text-slate-900 transition-colors flex items-center justify-center" title="Ligar">
+                                            <Phone size={18} />
+                                        </a>
+                                        <a href={`https://wa.me/55${(sale.customer as any)?.phone_1?.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex-1 lg:flex-none p-2.5 bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-100 hover:text-emerald-700 transition-colors flex items-center justify-center" title="WhatsApp">
+                                            <MessageCircle size={18} />
+                                        </a>
+                                        {sale.type === 'lead' ? (
+                                            <a href={`/crm/nova-venda?leadId=${sale.id}`} className="flex-[2] lg:flex-none px-4 py-2.5 bg-brand text-white rounded-xl hover:bg-brand/90 transition-colors shadow-sm flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider" title="Converter">
+                                                <Zap size={14} className="fill-current" /> <span className="lg:hidden xl:inline">Converter</span>
+                                            </a>
+                                        ) : sale.address && (
+                                            <a href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${(sale.address as any).street}, ${(sale.address as any).number}, ${(sale.address as any).neighborhood}, ${(sale.address as any).city_name}`)}`} target="_blank" rel="noopener noreferrer" className="flex-[2] lg:flex-none px-4 py-2.5 bg-blue-50 text-blue-700 rounded-xl hover:bg-blue-100 hover:text-blue-800 transition-colors flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider" title="Rota">
+                                                <MapPin size={14} /> <span className="lg:hidden xl:inline">Rota</span>
+                                            </a>
+                                        )}
                                     </div>
                                 </div>
                             );
                         })}
+
+                        {/* Pagination Controls */}
+                        {totalPages > 1 && (
+                            <div className="mt-8 flex items-center justify-between border-t border-slate-200/60 pt-6">
+                                <p className="text-sm text-slate-500 font-medium hidden sm:block">
+                                    Mostrando <span className="font-bold text-slate-900">{((currentPage - 1) * itemsPerPage) + 1}</span> até <span className="font-bold text-slate-900">{Math.min(currentPage * itemsPerPage, filteredSales.length)}</span> de <span className="font-bold text-slate-900">{filteredSales.length}</span> registros
+                                </p>
+                                <div className="flex items-center gap-2 w-full sm:w-auto justify-center">
+                                    <button
+                                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                        disabled={currentPage === 1}
+                                        className="p-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                    >
+                                        <ChevronLeft size={20} />
+                                    </button>
+                                    <div className="flex items-center gap-1 px-2">
+                                        {[...Array(totalPages)].map((_, i) => {
+                                            const page = i + 1;
+                                            if (totalPages > 5 && (page < currentPage - 2 || page > currentPage + 2) && page !== 1 && page !== totalPages) {
+                                                if (page === currentPage - 3 || page === currentPage + 3) {
+                                                    return <span key={page} className="text-slate-400 px-1">...</span>;
+                                                }
+                                                return null;
+                                            }
+                                            return (
+                                                <button
+                                                    key={page}
+                                                    onClick={() => setCurrentPage(page)}
+                                                    className={`w-9 h-9 flex items-center justify-center rounded-xl text-sm font-bold transition-all ${
+                                                        currentPage === page
+                                                        ? 'bg-brand text-white shadow-md shadow-brand/20'
+                                                        : 'text-slate-600 hover:bg-slate-100'
+                                                    }`}
+                                                >
+                                                    {page}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                    <button
+                                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                        disabled={currentPage === totalPages}
+                                        className="p-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                    >
+                                        <ChevronRight size={20} />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
