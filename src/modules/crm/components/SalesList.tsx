@@ -9,6 +9,9 @@ import { STATUS_LABELS } from '../types';
 export default function SalesList() {
     const [currentUserId, setCurrentUserId] = useState('');
     const [orgId, setOrgId] = useState('');
+    const [userStoreId, setUserStoreId] = useState<string | null>(null);
+    const [userStoreName, setUserStoreName] = useState<string | null>(null);
+    const [isAdmin, setIsAdmin] = useState(false);
     const [sales, setSales] = useState<CrmSale[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedSale, setSelectedSale] = useState<CrmSale | null>(null);
@@ -29,9 +32,19 @@ export default function SalesList() {
                 return;
             }
             setCurrentUserId(session.user.id);
-            const { data: profile } = await supabase.from('profiles').select('organization_id').eq('id', session.user.id).single();
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('organization_id, role, is_super_admin, crm_store_id, crm_store:crm_stores!profiles_crm_store_id_fkey(id, name)')
+                .eq('id', session.user.id)
+                .single();
             if (profile) {
                 setOrgId(profile.organization_id);
+                const isAdminUser = (profile as any).is_super_admin || profile.role === 'admin';
+                setIsAdmin(isAdminUser);
+                const storeId = (profile as any).crm_store_id ?? null;
+                const storeName = (profile as any).crm_store?.name ?? null;
+                setUserStoreId(storeId);
+                setUserStoreName(storeName);
             } else {
                 setLoading(false);
             }
@@ -40,14 +53,15 @@ export default function SalesList() {
 
     useEffect(() => {
         if (orgId) loadData();
-    }, [orgId, filterStatus]);
+    }, [orgId, filterStatus, isAdmin, userStoreId]);
 
     const loadData = async () => {
         if (!orgId) return;
         setLoading(true);
         try {
             const data = await fetchAllSales(orgId, {
-                status: filterStatus ? (filterStatus as SaleStatus) : undefined
+                status: filterStatus ? (filterStatus as SaleStatus) : undefined,
+                storeId: (!isAdmin && userStoreId) ? userStoreId : undefined,
             });
             setSales(data);
         } catch (error) {
@@ -135,6 +149,18 @@ export default function SalesList() {
 
     return (
         <div className="flex flex-col h-[calc(100vh-64px)] bg-gray-50 overflow-hidden">
+            {/* Store scope banner */}
+            {!isAdmin && userStoreName && (
+                <div className="flex items-center gap-2 px-6 py-2.5 bg-brand/5 border-b border-brand/10">
+                    <svg className="w-4 h-4 text-brand flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <span className="text-xs font-semibold text-brand">
+                        Exibindo vendas da operação: <span className="font-black">{userStoreName}</span>
+                    </span>
+                </div>
+            )}
             {/* KPI Section */}
             <div className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 bg-white border-b border-gray-200">
                 <div className="bg-brand/5 border border-brand/10 p-4 rounded-2xl">

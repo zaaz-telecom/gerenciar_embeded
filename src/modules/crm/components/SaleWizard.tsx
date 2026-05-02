@@ -30,6 +30,14 @@ export default function SaleWizard() {
     const [stores, setStores] = useState<CrmStore[]>([]);
     const [plans, setPlans] = useState<CrmPlan[]>([]);
     
+    const getInputClasses = (value: any, isRequired: boolean = false, extraClasses: string = "w-full") => {
+        const base = `${extraClasses} rounded-md border px-3 py-2 shadow-sm transition-all outline-none `;
+        if (isRequired && !value) {
+            return base + "border-red-500 focus:border-red-600 focus:ring-1 focus:ring-red-500";
+        }
+        return base + "border-gray-300 focus:border-brand focus:ring-1 focus:ring-brand";
+    };
+    
     useEffect(() => {
         (async () => {
             const { data: { session } } = await supabase.auth.getSession();
@@ -95,8 +103,8 @@ export default function SaleWizard() {
     const handleNext = async () => {
         setFormError('');
         if (currentStep === 0) {
-            if (!data.customer_name || !data.phone_1) {
-                setFormError('Por favor, preencha Nome e Telefone do contato.');
+            if (!data.customer_name || !data.phone_1 || !data.city_id) {
+                setFormError('Por favor, preencha Nome, Telefone e Cidade do contato.');
                 return;
             }
         }
@@ -126,6 +134,41 @@ export default function SaleWizard() {
                 });
             }
             setLoading(false);
+        }
+
+        if (currentStep === 2) {
+            if (!data.customer_name || !data.phone_1 || !data.cpf_cnpj || !data.parent_name || !data.rg || !data.email) {
+                setFormError('Por favor, preencha Nome Completo, Telefone, CPF, RG, E-mail e Nome da Mãe.');
+                return;
+            }
+        }
+
+        if (currentStep === 3) {
+            if (!data.zip_code || !data.city_id || !data.street || !data.address_number || !data.neighborhood || !data.store_id) {
+                setFormError('Por favor, preencha todos os campos do endereço e selecione a Loja/Operação.');
+                return;
+            }
+        }
+
+        if (currentStep === 4) {
+            if (!data.technology || !data.plan_id) {
+                setFormError('Por favor, selecione a Tecnologia e o Plano.');
+                return;
+            }
+        }
+
+        if (currentStep === 5) {
+            if (!data.due_day || !data.lead_source || !data.installation_period) {
+                setFormError('Por favor, preencha Vencimento, Origem e Período de Instalação.');
+                return;
+            }
+        }
+
+        if (currentStep === 6) {
+            if (!data.document_photo_file || !data.address_photo_file) {
+                setFormError('Por favor, envie todos os documentos solicitados.');
+                return;
+            }
         }
 
         setCurrentStep(p => Math.min(STEPS.length - 1, p + 1));
@@ -332,7 +375,7 @@ export default function SaleWizard() {
                             <input
                                 type="text"
                                 required
-                                className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-brand focus:border-brand"
+                                className={getInputClasses(data.customer_name, true)}
                                 value={data.customer_name}
                                 onChange={e => updateData({ customer_name: e.target.value })}
                             />
@@ -343,7 +386,7 @@ export default function SaleWizard() {
                                 <input
                                     type="text"
                                     required
-                                    className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-brand focus:border-brand"
+                                    className={getInputClasses(data.phone_1, true)}
                                     value={data.phone_1}
                                     onChange={e => updateData({ phone_1: e.target.value })}
                                 />
@@ -363,9 +406,9 @@ export default function SaleWizard() {
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Cidade (Opcional)</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Cidade *</label>
                                 <select
-                                    className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-brand focus:border-brand"
+                                    className={getInputClasses(data.city_id, true)}
                                     value={data.city_id}
                                     onChange={e => updateData({ city_id: e.target.value })}
                                 >
@@ -421,7 +464,7 @@ export default function SaleWizard() {
                             <div className="flex gap-2">
                                 <input
                                     type="text"
-                                    className="flex-1 rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-brand focus:border-brand"
+                                    className={getInputClasses(data.cpf_cnpj, true, "flex-1")}
                                     value={data.cpf_cnpj}
                                     onChange={e => updateData({ cpf_cnpj: e.target.value })}
                                     placeholder="Digite apenas números"
@@ -443,34 +486,45 @@ export default function SaleWizard() {
                         <h2 className="text-xl font-bold text-gray-900">Dados do Cliente</h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">CPF/CNPJ *</label>
+                                <input
+                                    type="text"
+                                    className={getInputClasses(data.cpf_cnpj, true)}
+                                    value={data.cpf_cnpj}
+                                    onChange={e => updateData({ cpf_cnpj: e.target.value })}
+                                />
+                            </div>
+                            <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Nome Completo *</label>
                                 <input
                                     type="text"
-                                    className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-brand focus:border-brand"
+                                    className={getInputClasses(data.customer_name, true)}
                                     value={data.customer_name}
                                     onChange={e => updateData({ customer_name: e.target.value })}
                                 />
                             </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">RG</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">RG *</label>
                                 <input
                                     type="text"
-                                    className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-brand focus:border-brand"
+                                    className={getInputClasses(data.rg, true)}
                                     value={data.rg || ''}
                                     onChange={e => updateData({ rg: e.target.value })}
                                 />
                             </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Telefone Principal *</label>
                                 <input
                                     type="text"
-                                    className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-brand focus:border-brand"
+                                    className={getInputClasses(data.phone_1, true)}
                                     value={data.phone_1}
                                     onChange={e => updateData({ phone_1: e.target.value })}
                                 />
                             </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Telefone Secundário</label>
                                 <input
@@ -480,12 +534,21 @@ export default function SaleWizard() {
                                     onChange={e => updateData({ phone_2: e.target.value })}
                                 />
                             </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">E-mail *</label>
+                                <input
+                                    type="email"
+                                    className={getInputClasses(data.email, true)}
+                                    value={data.email}
+                                    onChange={e => updateData({ email: e.target.value })}
+                                />
+                            </div>
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Nome da Mãe</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Nome da Mãe *</label>
                             <input
                                 type="text"
-                                className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-brand focus:border-brand"
+                                className={getInputClasses(data.parent_name, true)}
                                 value={data.parent_name}
                                 onChange={e => updateData({ parent_name: e.target.value })}
                             />
@@ -498,19 +561,19 @@ export default function SaleWizard() {
                         <h2 className="text-xl font-bold text-gray-900">Endereço de Instalação</h2>
                         <div className="flex gap-2">
                             <div className="flex-1">
-                                <label className="block text-sm font-medium text-gray-700 mb-1">CEP</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">CEP *</label>
                                 <input
                                     type="text"
-                                    className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-brand focus:border-brand"
+                                    className={getInputClasses(data.zip_code, true)}
                                     value={data.zip_code}
                                     onChange={e => updateData({ zip_code: e.target.value })}
                                     onBlur={handleCepSearch}
                                 />
                             </div>
                             <div className="flex-1">
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Cidade</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Cidade *</label>
                                 <select 
-                                    className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-brand focus:border-brand"
+                                    className={getInputClasses(data.city_id, true)}
                                     value={data.city_id}
                                     onChange={e => updateData({ city_id: e.target.value })}
                                 >
@@ -524,7 +587,7 @@ export default function SaleWizard() {
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Logradouro *</label>
                                 <input
                                     type="text"
-                                    className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-brand focus:border-brand"
+                                    className={getInputClasses(data.street, true)}
                                     value={data.street}
                                     onChange={e => updateData({ street: e.target.value })}
                                 />
@@ -533,7 +596,7 @@ export default function SaleWizard() {
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Número *</label>
                                 <input
                                     type="text"
-                                    className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-brand focus:border-brand"
+                                    className={getInputClasses(data.address_number, true)}
                                     value={data.address_number}
                                     onChange={e => updateData({ address_number: e.target.value })}
                                 />
@@ -544,7 +607,7 @@ export default function SaleWizard() {
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Bairro *</label>
                                 <input
                                     type="text"
-                                    className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-brand focus:border-brand"
+                                    className={getInputClasses(data.neighborhood, true)}
                                     value={data.neighborhood}
                                     onChange={e => updateData({ neighborhood: e.target.value })}
                                 />
@@ -560,9 +623,9 @@ export default function SaleWizard() {
                             </div>
                         </div>
                         <div className="mt-4">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Loja/Operação</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Loja/Operação *</label>
                             <select 
-                                className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-brand focus:border-brand"
+                                className={getInputClasses(data.store_id, true)}
                                 value={data.store_id}
                                 onChange={e => updateData({ store_id: e.target.value })}
                             >
@@ -578,9 +641,9 @@ export default function SaleWizard() {
                         <h2 className="text-xl font-bold text-gray-900">Configuração do Plano</h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Tecnologia</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Tecnologia *</label>
                                 <select 
-                                    className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-brand focus:border-brand"
+                                    className={getInputClasses(data.technology, true)}
                                     value={data.technology}
                                     onChange={e => updateData({ technology: e.target.value as Technology })}
                                 >
@@ -589,9 +652,9 @@ export default function SaleWizard() {
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Plano</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Plano *</label>
                                 <select 
-                                    className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-brand focus:border-brand"
+                                    className={getInputClasses(data.plan_id, true)}
                                     value={data.plan_id}
                                     onChange={e => {
                                         const selectedPlan = plans.find(p => p.id === e.target.value);
@@ -616,9 +679,9 @@ export default function SaleWizard() {
                         <h2 className="text-xl font-bold text-gray-900">Detalhes Comerciais</h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Vencimento</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Vencimento *</label>
                                 <select 
-                                    className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-brand focus:border-brand"
+                                    className={getInputClasses(data.due_day, true)}
                                     value={data.due_day}
                                     onChange={e => updateData({ due_day: e.target.value })}
                                 >
@@ -627,9 +690,9 @@ export default function SaleWizard() {
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Origem da Venda</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Origem da Venda *</label>
                                 <select 
-                                    className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-brand focus:border-brand"
+                                    className={getInputClasses(data.lead_source, true)}
                                     value={data.lead_source}
                                     onChange={e => updateData({ lead_source: e.target.value })}
                                 >
@@ -645,9 +708,9 @@ export default function SaleWizard() {
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Período de Instalação</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Período de Instalação *</label>
                                 <select 
-                                    className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:ring-brand focus:border-brand"
+                                    className={getInputClasses(data.installation_period, true)}
                                     value={data.installation_period}
                                     onChange={e => updateData({ installation_period: e.target.value })}
                                 >
@@ -726,8 +789,8 @@ export default function SaleWizard() {
                     <div className="space-y-6">
                         <h2 className="text-xl font-bold text-gray-900">Upload de Documentos</h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="border border-gray-200 rounded-xl p-4 bg-gray-50">
-                                <label className="block text-sm font-medium text-gray-900 mb-2">RG / CNH</label>
+                            <div className={`border rounded-xl p-4 transition-all ${!data.document_photo_file ? 'border-red-500 bg-red-50' : 'border-gray-200 bg-gray-50'}`}>
+                                <label className="block text-sm font-medium text-gray-900 mb-2">RG / CNH *</label>
                                 <input
                                     type="file"
                                     accept="image/*,.pdf"
@@ -739,8 +802,8 @@ export default function SaleWizard() {
                                 />
                                 <p className="text-xs text-gray-500 mt-2">Envie a foto frente e verso do documento de identificação.</p>
                             </div>
-                            <div className="border border-gray-200 rounded-xl p-4 bg-gray-50">
-                                <label className="block text-sm font-medium text-gray-900 mb-2">Comprovante de Residência</label>
+                            <div className={`border rounded-xl p-4 transition-all ${!data.address_photo_file ? 'border-red-500 bg-red-50' : 'border-gray-200 bg-gray-50'}`}>
+                                <label className="block text-sm font-medium text-gray-900 mb-2">Comprovante de Residência *</label>
                                 <input
                                     type="file"
                                     accept="image/*,.pdf"

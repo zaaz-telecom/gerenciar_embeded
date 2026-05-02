@@ -31,6 +31,11 @@ interface OrganizationRole {
     name: string;
 }
 
+interface CrmStore {
+    id: string;
+    name: string;
+}
+
 interface Department {
     id: string;
     name: string;
@@ -83,6 +88,7 @@ export default function UserForm({ isOpen, onClose, onSuccess, userToEdit }: Use
     const [admissionDate, setAdmissionDate] = useState('');
     const [inactivationDate, setInactivationDate] = useState('');
     const [sendWelcome, setSendWelcome] = useState(true);
+    const [crmStoreId, setCrmStoreId] = useState('');
 
     // Additional state for managers list
     const [managers, setManagers] = useState<UserProfile[]>([]);
@@ -90,6 +96,7 @@ export default function UserForm({ isOpen, onClose, onSuccess, userToEdit }: Use
     const [availableSectors, setAvailableSectors] = useState<Sector[]>([]);
     const [availableJobTitles, setAvailableJobTitles] = useState<JobTitle[]>([]);
     const [availableRoles, setAvailableRoles] = useState<OrganizationRole[]>([]);
+    const [availableStores, setAvailableStores] = useState<CrmStore[]>([]);
 
     useEffect(() => {
         // Fetch potential managers (all users in org) and metadata
@@ -160,6 +167,18 @@ export default function UserForm({ isOpen, onClose, onSuccess, userToEdit }: Use
             if (rolesData) {
                 setAvailableRoles(rolesData);
             }
+
+            // Fetch CRM Stores for Operação/Loja field
+            const { data: storesData } = await supabase
+                .from('crm_stores')
+                .select('id, name')
+                .eq('organization_id', orgId)
+                .eq('is_active', true)
+                .order('name');
+
+            if (storesData) {
+                setAvailableStores(storesData);
+            }
         };
 
         if (isOpen) {
@@ -190,6 +209,7 @@ export default function UserForm({ isOpen, onClose, onSuccess, userToEdit }: Use
                 setOrganizationRoleId(userToEdit.organization_role_id || '');
                 setAdmissionDate((userToEdit as any).admission_date || '');
                 setInactivationDate((userToEdit as any).inactivation_date || '');
+                setCrmStoreId((userToEdit as any).crm_store_id || '');
 
                 setPassword('');
                 setConfirmPassword('');
@@ -211,6 +231,7 @@ export default function UserForm({ isOpen, onClose, onSuccess, userToEdit }: Use
                 setOrganizationRoleId('');
                 setAdmissionDate('');
                 setInactivationDate('');
+                setCrmStoreId('');
                 setPassword('');
                 setConfirmPassword('');
                 setShowPassword(false);
@@ -339,8 +360,8 @@ export default function UserForm({ isOpen, onClose, onSuccess, userToEdit }: Use
                         gender,
                         organization_role_id: organizationRoleId || null,
                         admission_date: admissionDate || null,
-                        inactivation_date: inactivationDate || null
-                        // email removed from here as we don't have the column in profiles yet
+                        inactivation_date: inactivationDate || null,
+                        crm_store_id: crmStoreId || null,
                     })
                     .eq('id', userToEdit.id);
 
@@ -747,6 +768,25 @@ export default function UserForm({ isOpen, onClose, onSuccess, userToEdit }: Use
                                                                 <option key={r.id} value={r.id}>{r.name}</option>
                                                             ))}
                                                         </select>
+                                                    </div>
+
+                                                    <div>
+                                                        <label htmlFor="crmStore" className="block text-sm font-medium text-gray-700">
+                                                            Operação / Loja
+                                                            <span className="ml-1 text-xs text-gray-400 font-normal">(BKO — acesso no CRM)</span>
+                                                        </label>
+                                                        <select
+                                                            id="crmStore"
+                                                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-brand focus:border-brand sm:text-sm bg-white"
+                                                            value={crmStoreId}
+                                                            onChange={e => setCrmStoreId(e.target.value)}
+                                                        >
+                                                            <option value="">Nenhuma (acesso global)</option>
+                                                            {availableStores.map(store => (
+                                                                <option key={store.id} value={store.id}>{store.name}</option>
+                                                            ))}
+                                                        </select>
+                                                        <p className="mt-1 text-xs text-gray-400">Se definido, o usuário verá apenas as vendas desta operação no Acompanhamento do CRM.</p>
                                                     </div>
 
                                                     {!userToEdit && (
