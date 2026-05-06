@@ -142,6 +142,87 @@ import PowerBiHelpModal from "../../../components/PowerBiHelpModal.astro";
                     </div>
                 </div>
 
+                <!-- Separator -->
+                <div class="border-t border-gray-200 pt-6">
+                    <div class="flex items-center gap-2 mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-500" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M18 8a6 6 0 01-7.743 5.743L10 14l-1 1-1 1H6v2H2v-4l4.257-4.257A6 6 0 1118 8zm-6-4a1 1 0 100 2 2 2 0 012 2 1 1 0 102 0 4 4 0 00-4-4z" clip-rule="evenodd" />
+                        </svg>
+                        <div>
+                            <h3 class="text-sm font-semibold text-text-primary">Credenciais Master User (Opcional)</h3>
+                            <p class="text-xs text-text-secondary">Configure apenas se algum dashboard usar o modo "Master User".</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-amber-50 border-l-4 border-amber-400 p-3 mb-4">
+                        <p class="text-xs text-amber-700">
+                            <strong>Atenção:</strong> A conta Microsoft configurada aqui <strong>não pode ter MFA habilitado</strong>. 
+                            Recomendamos usar uma conta de serviço dedicada (ex: <code>powerbi-embed@empresa.com</code>).
+                        </p>
+                    </div>
+
+                    <!-- Master User Email -->
+                    <div class="space-y-4">
+                        <div>
+                            <label
+                                for="pbi_user_email"
+                                class="block text-sm font-medium text-text-secondary"
+                                >E-mail Microsoft</label
+                            >
+                            <input
+                                type="email"
+                                name="pbi_user_email"
+                                id="pbi_user_email"
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-brand focus:ring-brand sm:text-sm px-3 py-2 border"
+                                placeholder="ex: powerbi-embed@empresa.com"
+                            />
+                        </div>
+
+                        <!-- Master User Password -->
+                        <div>
+                            <label
+                                for="pbi_user_password"
+                                class="block text-sm font-medium text-text-secondary"
+                                >Senha Microsoft</label
+                            >
+                            <div class="relative mt-1">
+                                <input
+                                    type="password"
+                                    name="pbi_user_password"
+                                    id="pbi_user_password"
+                                    class="block w-full rounded-md border-gray-300 shadow-sm focus:border-brand focus:ring-brand sm:text-sm px-3 py-2 border pr-10"
+                                    placeholder="••••••••••••••••"
+                                />
+                                <button
+                                    type="button"
+                                    id="toggle-user-password"
+                                    class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-gray-600"
+                                >
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        class="h-4 w-4"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="2"
+                                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="2"
+                                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                        ></path>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div
                     class="pt-4 flex items-center justify-end border-t border-gray-100"
                 >
@@ -211,6 +292,14 @@ import PowerBiHelpModal from "../../../components/PowerBiHelpModal.astro";
                         "pbi_client_secret",
                     ) as HTMLInputElement
                 ).value = settings.pbi_client_secret || "";
+                (
+                    document.getElementById("pbi_user_email") as HTMLInputElement
+                ).value = settings.pbi_user_email || "";
+                (
+                    document.getElementById(
+                        "pbi_user_password",
+                    ) as HTMLInputElement
+                ).value = settings.pbi_user_password || "";
             }
         } catch (e) {
             console.error("Error loading settings:", e);
@@ -228,6 +317,21 @@ import PowerBiHelpModal from "../../../components/PowerBiHelpModal.astro";
                     ? "text"
                     : "password";
             secretInput.setAttribute("type", type);
+        });
+    }
+
+    // Toggle User Password Visibility
+    const toggleUserPwdBtn = document.getElementById("toggle-user-password");
+    const userPwdInput = document.getElementById(
+        "pbi_user_password",
+    ) as HTMLInputElement;
+    if (toggleUserPwdBtn && userPwdInput) {
+        toggleUserPwdBtn.addEventListener("click", () => {
+            const type =
+                userPwdInput.getAttribute("type") === "password"
+                    ? "text"
+                    : "password";
+            userPwdInput.setAttribute("type", type);
         });
     }
 
@@ -255,6 +359,8 @@ import PowerBiHelpModal from "../../../components/PowerBiHelpModal.astro";
                     pbi_tenant_id: formData.get("pbi_tenant_id"),
                     pbi_client_id: formData.get("pbi_client_id"),
                     pbi_client_secret: formData.get("pbi_client_secret"),
+                    pbi_user_email: formData.get("pbi_user_email") || null,
+                    pbi_user_password: formData.get("pbi_user_password") || null,
                 };
 
                 const response = await fetch("/api/admin/settings", {

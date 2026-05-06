@@ -35,9 +35,12 @@ export const GET: APIRoute = async ({ request }) => {
             .single();
 
         if (settings) {
-            // Mask the secret
+            // Mask sensitive fields
             if (settings.pbi_client_secret) {
                 settings.pbi_client_secret = '••••••••••••••••';
+            }
+            if (settings.pbi_user_password) {
+                settings.pbi_user_password = '••••••••••••••••';
             }
         }
 
@@ -67,9 +70,12 @@ export const POST: APIRoute = async ({ request }) => {
 
         const body = await request.json();
         
-        // If the secret is the masked version, don't update it
+        // If masked values are sent, don't update them
         if (body.pbi_client_secret === '••••••••••••••••') {
             delete body.pbi_client_secret;
+        }
+        if (body.pbi_user_password === '••••••••••••••••') {
+            delete body.pbi_user_password;
         }
 
         const updates = {

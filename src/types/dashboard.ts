@@ -62,6 +62,8 @@ export interface OrganizationMenu {
     updated_at: string;
 }
 
+export type EmbedMode = 'service_principal' | 'master_user';
+
 export interface OrganizationDashboard {
     id: string;
     organization_id: string;
@@ -71,6 +73,7 @@ export interface OrganizationDashboard {
     report_id: string;
     allowed_groups?: string;
     menu_id?: string;
+    embed_mode: EmbedMode;
     created_at: string;
     updated_at: string;
 }

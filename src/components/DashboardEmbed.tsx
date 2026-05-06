@@ -8,6 +8,7 @@ interface EmbedConfig {
     embedUrl: string;
     reportId: string;
     canExportData: boolean;
+    tokenType: 'Embed' | 'Aad';
 }
 
 export const DashboardEmbed: React.FC = () => {
@@ -23,6 +24,7 @@ export const DashboardEmbed: React.FC = () => {
 
                 let targetWorkspaceId: string | undefined;
                 let targetReportId: string | undefined;
+                let targetEmbedMode: string | undefined;
 
                 // If specific dashboard requested, fetch its config
                 if (dashboardId) {
@@ -30,13 +32,14 @@ export const DashboardEmbed: React.FC = () => {
                     if (session) {
                         const { data: dashboard, error: dbError } = await supabase
                             .from('organization_dashboards')
-                            .select('workspace_id, report_id')
+                            .select('workspace_id, report_id, embed_mode')
                             .eq('id', dashboardId)
                             .single();
 
                         if (!dbError && dashboard) {
                             targetWorkspaceId = dashboard.workspace_id;
                             targetReportId = dashboard.report_id;
+                            targetEmbedMode = dashboard.embed_mode;
                         }
                     }
                 }
@@ -78,7 +81,7 @@ export const DashboardEmbed: React.FC = () => {
                     // Try to find the "first" dashboard for this org only if no specific ID was requested
                     let dashboardsQuery = supabase
                         .from('organization_dashboards')
-                        .select('workspace_id, report_id')
+                        .select('workspace_id, report_id, embed_mode')
                         .eq('organization_id', profile.organization_id);
 
                     if (profile.role !== 'admin') {
@@ -107,6 +110,7 @@ export const DashboardEmbed: React.FC = () => {
                     if (firstDash) {
                         payload.group_id = firstDash.workspace_id;
                         payload.report_id = firstDash.report_id;
+                        if (!targetEmbedMode) targetEmbedMode = firstDash.embed_mode;
                     }
                 }
 
@@ -115,6 +119,11 @@ export const DashboardEmbed: React.FC = () => {
                     // If we requested a specific ID and fell through here, it means it wasn't valid/found.
                     // If we didn't request an ID and found no default, same issue.
                     throw new Error("Dashboard não encontrado ou configuração incompleta.");
+                }
+
+                // Add embed_mode to payload
+                if (targetEmbedMode) {
+                    payload.embed_mode = targetEmbedMode;
                 }
 
                 const response = await fetch('/api/pbi/token', {
@@ -139,6 +148,7 @@ export const DashboardEmbed: React.FC = () => {
 
                 setConfig({
                     ...data,
+                    tokenType: data.tokenType || 'Embed',
                     canExportData: profile.role === 'admin' || profile.can_export_data === true || roleExport === true
                 });
             } catch (err: any) {
@@ -174,7 +184,7 @@ export const DashboardEmbed: React.FC = () => {
                     id: config.reportId,
                     embedUrl: config.embedUrl,
                     accessToken: config.accessToken,
-                    tokenType: models.TokenType.Embed,
+                    tokenType: config.tokenType === 'Aad' ? models.TokenType.Aad : models.TokenType.Embed,
                     settings: {
                         panes: {
                             filters: { visible: false, expanded: false },

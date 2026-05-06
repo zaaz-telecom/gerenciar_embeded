@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { supabase } from '../../../lib/supabase';
-import type { OrganizationDashboard } from '../../../types/dashboard';
+import type { OrganizationDashboard, EmbedMode } from '../../../types/dashboard';
 
 interface DashboardFormProps {
     dashboard?: OrganizationDashboard | null;
@@ -27,6 +27,7 @@ export default function DashboardForm({ dashboard, isOpen, onClose, onSuccess }:
     const [workspaceId, setWorkspaceId] = useState('');
     const [reportId, setReportId] = useState('');
     const [menuId, setMenuId] = useState('');
+    const [embedMode, setEmbedMode] = useState<EmbedMode>('service_principal');
 
     useEffect(() => {
         setMounted(true);
@@ -43,6 +44,7 @@ export default function DashboardForm({ dashboard, isOpen, onClose, onSuccess }:
                 setWorkspaceId(dashboard.workspace_id);
                 setReportId(dashboard.report_id);
                 setMenuId(dashboard.menu_id || '');
+                setEmbedMode(dashboard.embed_mode || 'service_principal');
             } else {
                 // Create mode - reset
                 setName('');
@@ -50,6 +52,7 @@ export default function DashboardForm({ dashboard, isOpen, onClose, onSuccess }:
                 setWorkspaceId('');
                 setReportId('');
                 setMenuId('');
+                setEmbedMode('service_principal');
             }
             setError(null);
         }
@@ -106,6 +109,7 @@ export default function DashboardForm({ dashboard, isOpen, onClose, onSuccess }:
                 workspace_id: workspaceId,
                 report_id: reportId,
                 menu_id: menuId || null,
+                embed_mode: embedMode,
                 updated_at: new Date().toISOString(),
             };
 
@@ -221,6 +225,26 @@ export default function DashboardForm({ dashboard, isOpen, onClose, onSuccess }:
                                                 </select>
                                                 <p className="mt-1 text-xs text-gray-500">
                                                     Selecione o menu onde este dashboard será exibido.
+                                                </p>
+                                            </div>
+
+                                            <div>
+                                                <label htmlFor="embedMode" className="block text-sm font-medium text-gray-700">
+                                                    Modo de Autenticação
+                                                </label>
+                                                <select
+                                                    id="embedMode"
+                                                    className="mt-1 block w-full bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-brand focus:border-brand sm:text-sm"
+                                                    value={embedMode}
+                                                    onChange={e => setEmbedMode(e.target.value as EmbedMode)}
+                                                >
+                                                    <option value="service_principal">Service Principal (App Owns Data)</option>
+                                                    <option value="master_user">Master User (Conta Compartilhada)</option>
+                                                </select>
+                                                <p className="mt-1 text-xs text-gray-500">
+                                                    {embedMode === 'master_user'
+                                                        ? 'Usa credenciais de usuário Microsoft configuradas nas Configurações. Não consome tokens de embed.'
+                                                        : 'Usa Service Principal para gerar tokens de embed. Requer capacidade Embedded ou PPU.'}
                                                 </p>
                                             </div>
 
