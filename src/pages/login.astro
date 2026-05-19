@@ -10,14 +10,15 @@ import TurnstileWidget from "../components/TurnstileWidget.astro";
         <div
             class="max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow-lg border border-gray-100"
         >
-            <div class="text-center">
+            <div class="text-center" id="tenant-brand">
+                <!-- Populated by JS via /api/auth/tenant -->
                 <div class="flex items-center justify-center gap-4 mb-2">
-                    <img src="/favicon.png" alt="MIS Logo" class="h-12 w-12 object-contain" />
-                    <h1 class="text-4xl font-light text-text-primary tracking-tight">
+                    <img src="/favicon.png" alt="Logo" class="h-12 w-12 object-contain" id="tenant-logo-img" />
+                    <h1 class="text-4xl font-light text-text-primary tracking-tight" id="tenant-name">
                         MIS
                     </h1>
                 </div>
-                <p class="text-sm text-text-secondary font-medium tracking-wide">
+                <p class="text-sm text-text-secondary font-medium tracking-wide" id="tenant-subtitle">
                     Manager Operation Systems
                 </p>
             </div>
@@ -162,6 +163,44 @@ import TurnstileWidget from "../components/TurnstileWidget.astro";
 <script>
     import { supabase } from "../lib/supabase";
 
+    // Load org branding based on the current domain
+    async function loadTenantBranding() {
+        try {
+            const res = await fetch('/api/auth/tenant');
+            if (!res.ok) return;
+
+            const { found, org } = await res.json();
+            if (!found || !org) return;
+
+            // Apply accent color
+            if (org.accent_color) {
+                document.documentElement.style.setProperty('--color-brand', org.accent_color);
+            }
+
+            // Apply logo
+            const logoImg = document.getElementById('tenant-logo-img') as HTMLImageElement | null;
+            if (logoImg && org.logo_url) {
+                logoImg.src = org.logo_url;
+                logoImg.alt = org.name || 'Logo';
+            }
+
+            // Apply org name
+            const nameEl = document.getElementById('tenant-name');
+            if (nameEl && org.name) {
+                nameEl.textContent = org.name;
+            }
+
+            // Hide generic subtitle when a real org is found
+            const subtitleEl = document.getElementById('tenant-subtitle');
+            if (subtitleEl && org.name) {
+                subtitleEl.classList.add('hidden');
+            }
+
+        } catch (e) {
+            // Fail silently — login still works with generic branding
+        }
+    }
+
     function initLogin() {
         const form = document.getElementById("loginForm") as HTMLFormElement;
         const errorDiv = document.getElementById("loginError");
@@ -289,8 +328,18 @@ import TurnstileWidget from "../components/TurnstileWidget.astro";
         });
     }
 
+    // Run on initial load
+    loadTenantBranding();
     initLogin();
-    document.addEventListener('astro:page-load', initLogin);
-    document.addEventListener('DOMContentLoaded', initLogin);
+
+    // Re-run on Astro view transitions
+    document.addEventListener('astro:page-load', () => {
+        loadTenantBranding();
+        initLogin();
+    });
+    document.addEventListener('DOMContentLoaded', () => {
+        loadTenantBranding();
+        initLogin();
+    });
 
 </script>
