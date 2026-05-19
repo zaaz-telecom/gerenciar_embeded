@@ -68,6 +68,13 @@ if (supabaseAdmin) {
     <meta name="generator" content={Astro.generator} />
     <title>{title} | MIS</title>
     <ClientRouter />
+    {ssrAccentColor && (
+      <style define:vars={{ brandColor: ssrAccentColor }}>
+        :root {
+          --color-brand: var(--brandColor);
+        }
+      </style>
+    )}
   </head>
   <body
     class="bg-surface text-text-primary h-screen flex flex-col overflow-hidden"
@@ -547,15 +554,26 @@ if (supabaseAdmin) {
 
             if (org.accent_color) {
               const root = document.documentElement;
-              // Set the brand css variables
-              root.style.setProperty("--color-brand", org.accent_color);
+              // Set the brand css variables only if different
+              if (root.style.getPropertyValue("--color-brand") !== org.accent_color) {
+                root.style.setProperty("--color-brand", org.accent_color);
+              }
             }
 
             const brandContainer = document.getElementById("global-brand-logo");
-            if (brandContainer && org.logo_url) {
-              brandContainer.innerHTML = `<img src="${org.logo_url}" alt="${org.name}" class="h-8 w-auto object-contain" />`;
-            } else if (brandContainer) {
-              brandContainer.innerHTML = `<span>🔷</span><span id="org-name-header">${org.name}</span>`;
+            if (brandContainer) {
+              if (org.logo_url) {
+                // Only update if it's actually different to prevent DOM flashing
+                const currentImg = brandContainer.querySelector('img');
+                if (!currentImg || currentImg.getAttribute('src') !== org.logo_url) {
+                  brandContainer.innerHTML = `<img src="${org.logo_url}" alt="${org.name}" class="h-8 w-auto object-contain" />`;
+                }
+              } else {
+                // If no logo, ensure the default is set
+                if (!brandContainer.querySelector('span')) {
+                  brandContainer.innerHTML = `<span>🔷</span><span id="org-name-header">${org.name}</span>`;
+                }
+              }
             }
 
             // Guardar context p/ evitar piscada no próximo recarregamento (FOUC)
