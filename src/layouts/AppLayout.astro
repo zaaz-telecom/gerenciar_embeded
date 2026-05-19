@@ -26,6 +26,36 @@ const {
   hideSidebar = false,
   rawSidebar = false,
 } = Astro.props;
+
+import { supabaseAdmin } from "../lib/supabase";
+
+let ssrOrgName = "MIS";
+let ssrLogoUrl = "";
+let ssrAccentColor = "";
+
+if (supabaseAdmin) {
+    let host = Astro.request.headers.get("x-forwarded-host") || Astro.request.headers.get("host") || "";
+    if (host.includes(":")) host = host.split(":")[0];
+    host = host.replace(/^www\./, "");
+    
+    const urlObj = new URL(Astro.request.url);
+    if (urlObj.searchParams.get("tenant") === "zaaz") host = "bi.zaaztelecom.com.br";
+    if (urlObj.searchParams.get("tenant") === "online") host = "online.net.br";
+
+    const { data } = await supabaseAdmin
+        .from("organization_domains")
+        .select(`organizations (name, logo_url, accent_color)`)
+        .eq("domain", host)
+        .limit(1);
+
+    const domainData = data?.[0];
+    if (domainData?.organizations) {
+        const dbOrg = Array.isArray(domainData.organizations) ? domainData.organizations[0] : domainData.organizations;
+        ssrOrgName = dbOrg.name || ssrOrgName;
+        ssrLogoUrl = dbOrg.logo_url || ssrLogoUrl;
+        ssrAccentColor = dbOrg.accent_color || ssrAccentColor;
+    }
+}
 ---
 
 <!doctype html>
@@ -52,8 +82,14 @@ const {
           class="text-xl font-semibold text-brand tracking-tight flex items-center gap-2"
           id="global-brand-logo"
         >
-          <span>🔷</span>
-          <span id="org-name-header">MIS</span>
+          {ssrLogoUrl ? (
+            <img src={ssrLogoUrl} alt={ssrOrgName} class="h-8 w-auto object-contain" />
+          ) : (
+            <>
+              <span>🔷</span>
+              <span id="org-name-header">{ssrOrgName}</span>
+            </>
+          )}
         </a>
 
         <!-- Module Navigation -->
