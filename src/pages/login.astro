@@ -12,6 +12,8 @@ let org = {
 // Check if we are rendering on the server and have access to supabaseAdmin
 if (supabaseAdmin) {
     let host = Astro.request.headers.get("x-forwarded-host") || Astro.request.headers.get("host") || "";
+    if (host.includes(":")) host = host.split(":")[0]; // Strip port for DB matching
+
     const urlObj = new URL(Astro.request.url);
     if (urlObj.searchParams.get("tenant") === "zaaz") host = "bi.zaaztelecom.com.br";
     if (urlObj.searchParams.get("tenant") === "online") host = "online.net.br";

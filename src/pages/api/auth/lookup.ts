@@ -25,9 +25,9 @@ export const POST: APIRoute = async ({ request }) => {
                 .from("organization_domains")
                 .select("organization_id")
                 .eq("domain", host)
-                .maybeSingle();
+                .limit(1);
 
-            domainOrgId = domainData?.organization_id ?? null;
+            domainOrgId = domainData?.[0]?.organization_id ?? null;
         }
 
         // --- Lookup user by CPF or email ---
