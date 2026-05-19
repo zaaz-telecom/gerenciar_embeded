@@ -1,6 +1,50 @@
 ---
 import AppLayout from "../layouts/AppLayout.astro";
 import TurnstileWidget from "../components/TurnstileWidget.astro";
+import { supabaseAdmin } from "../lib/supabase";
+
+let org = {
+    name: "MIS",
+    logo_url: "/favicon.png",
+    subtitle: "Manager Operation Systems"
+};
+
+// Check if we are rendering on the server and have access to supabaseAdmin
+if (supabaseAdmin) {
+    let host = Astro.request.headers.get("x-forwarded-host") || Astro.request.headers.get("host") || "";
+    const urlObj = new URL(Astro.request.url);
+    if (urlObj.searchParams.get("tenant") === "zaaz") host = "bi.zaaztelecom.com.br";
+    if (urlObj.searchParams.get("tenant") === "online") host = "online.net.br";
+
+    const { data } = await supabaseAdmin
+        .from("organization_domains")
+        .select(`
+            organizations (
+                name,
+                logo_url
+            )
+        `)
+        .eq("domain", host)
+        .limit(1);
+
+    const domainData = data?.[0];
+    if (domainData?.organizations) {
+        const dbOrg = Array.isArray(domainData.organizations)
+            ? domainData.organizations[0]
+            : domainData.organizations;
+            
+        org.name = dbOrg.name || org.name;
+        org.logo_url = dbOrg.logo_url || org.logo_url;
+        
+        if (org.name.toLowerCase().includes('zaaz')) {
+            org.subtitle = 'DEPARTAMENTO DE PLANEJAMENTO E CONTROLE';
+        } else if (org.name.toLowerCase().includes('online')) {
+            org.subtitle = 'MIS';
+        } else {
+            org.subtitle = '';
+        }
+    }
+}
 ---
 
 <AppLayout title="Acessar Conta" disableNav={true}>
@@ -16,12 +60,12 @@ import TurnstileWidget from "../components/TurnstileWidget.astro";
             <div class="text-center" id="tenant-brand">
                 <!-- Populated by JS via /api/auth/tenant -->
                 <div class="flex flex-col items-center justify-center mb-6">
-                    <img src="/favicon.png" alt="Logo" class="h-24 w-auto max-w-[250px] object-contain transition-all duration-300" id="tenant-logo-img" />
+                    <img src={org.logo_url} alt={org.name} class="h-24 w-auto max-w-[250px] object-contain transition-all duration-300" id="tenant-logo-img" />
                     <h1 class="hidden text-4xl font-light text-text-primary tracking-tight" id="tenant-name">
-                        MIS
+                        {org.name}
                     </h1>
-                    <p class="text-xs text-text-secondary font-bold tracking-wide mt-3 text-center uppercase hidden" id="tenant-subtitle">
-                        Manager Operation Systems
+                    <p class={`text-xs text-text-secondary font-bold tracking-wide mt-3 text-center uppercase ${org.subtitle ? '' : 'hidden'}`} id="tenant-subtitle">
+                        {org.subtitle}
                     </p>
                 </div>
             </div>
