@@ -41,16 +41,23 @@ export const POST: APIRoute = async ({ request }) => {
             }
 
             if (cpfToSearch.length === 11) {
-                const { data, error } = await supabaseAdmin!
+                let query = supabaseAdmin!
                     .from('profiles')
                     .select('email, status, organization_id')
-                    .eq('cpf', cpfToSearch)
-                    .maybeSingle();
+                    .eq('cpf', cpfToSearch);
+
+                if (domainOrgId) {
+                    query = query.eq('organization_id', domainOrgId);
+                }
+
+                const { data: results, error } = await query.limit(1);
 
                 if (error) {
                     console.error("Lookup CPF Error:", error);
                     return new Response(JSON.stringify({ error: "Erro ao consultar identificador" }), { status: 500 });
                 }
+
+                const data = results && results.length > 0 ? results[0] : null;
 
                 if (data?.status === 'inactive') {
                     return new Response(JSON.stringify({ error: "Sua conta está inativa. Entre em contato com o administrador." }), { status: 403 });
@@ -67,16 +74,23 @@ export const POST: APIRoute = async ({ request }) => {
                 }), { status: 400 });
             }
         } else if (identifier.includes('@')) {
-            const { data, error } = await supabaseAdmin!
+            let query = supabaseAdmin!
                 .from('profiles')
                 .select('email, status, organization_id')
-                .eq('email', identifier.trim().toLowerCase())
-                .maybeSingle();
+                .eq('email', identifier.trim().toLowerCase());
+
+            if (domainOrgId) {
+                query = query.eq('organization_id', domainOrgId);
+            }
+
+            const { data: results, error } = await query.limit(1);
 
             if (error) {
                 console.error("Lookup Email Error:", error);
                 return new Response(JSON.stringify({ error: "Erro ao consultar email" }), { status: 500 });
             }
+
+            const data = results && results.length > 0 ? results[0] : null;
 
             if (data?.status === 'inactive') {
                 return new Response(JSON.stringify({ error: "Sua conta está inativa. Entre em contato com o administrador." }), { status: 403 });
