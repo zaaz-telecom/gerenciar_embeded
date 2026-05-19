@@ -18,6 +18,6 @@ export const supabase = createClient(
 // Server-only admin client — only create when the key is available
 const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
 
-export const supabaseAdmin = (typeof process !== 'undefined' && supabaseServiceKey)
+export const supabaseAdmin = supabaseServiceKey
   ? createClient(supabaseUrl || 'https://placeholder.supabase.co', supabaseServiceKey)
   : null; // Never expose admin client to the browser
