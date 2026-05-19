@@ -10,9 +10,13 @@ export const POST: APIRoute = async ({ request }) => {
         }
 
         // --- Resolve domain org (for access control) ---
-        const host = (request.headers.get("host") || "")
+        let host = (request.headers.get("host") || "")
             .split(":")[0]
             .replace(/^www\./, "");
+
+        const urlObj = new URL(request.url);
+        if (urlObj.searchParams.get('tenant') === 'zaaz') host = 'bi.zaaztelecom.com.br';
+        if (urlObj.searchParams.get('tenant') === 'online') host = 'online.net.br';
 
         let domainOrgId: string | null = null;
 

@@ -15,9 +15,14 @@ export const GET: APIRoute = async ({ request }) => {
         }
 
         // Extract host, stripping port and www prefix
-        const host = (request.headers.get("host") || "")
+        let host = (request.headers.get("host") || "")
             .split(":")[0]
             .replace(/^www\./, "");
+
+        // --- OVERRIDE PARA TESTES LOCAIS ---
+        const urlObj = new URL(request.url);
+        if (urlObj.searchParams.get('tenant') === 'zaaz') host = 'bi.zaaztelecom.com.br';
+        if (urlObj.searchParams.get('tenant') === 'online') host = 'online.net.br';
 
         if (!host) {
             return new Response(JSON.stringify({ error: "Host header missing" }), { status: 400 });
@@ -32,18 +37,21 @@ export const GET: APIRoute = async ({ request }) => {
                     id,
                     name,
                     logo_url,
-                    accent_color
+                    accent_color,
+                    login_background_url
                 )
             `)
             .eq("domain", host)
-            .maybeSingle();
+            .limit(1);
 
         if (error) {
             console.error("Tenant lookup error:", error);
             return new Response(JSON.stringify({ error: "Erro ao consultar tenant" }), { status: 500 });
         }
 
-        if (!data?.organizations) {
+        const domainData = data?.[0];
+
+        if (!domainData?.organizations) {
             // Domain not mapped — return a generic fallback so the login page still works
             return new Response(JSON.stringify({
                 found: false,
@@ -51,9 +59,9 @@ export const GET: APIRoute = async ({ request }) => {
             }), { status: 200 });
         }
 
-        const org = Array.isArray(data.organizations)
-            ? data.organizations[0]
-            : data.organizations;
+        const org = Array.isArray(domainData.organizations)
+            ? domainData.organizations[0]
+            : domainData.organizations;
 
         return new Response(JSON.stringify({
             found: true,
@@ -62,6 +70,7 @@ export const GET: APIRoute = async ({ request }) => {
                 name: org.name,
                 logo_url: org.logo_url,
                 accent_color: org.accent_color,
+                login_background_url: org.login_background_url,
             },
         }), {
             status: 200,
