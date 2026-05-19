@@ -310,7 +310,8 @@ import TurnstileWidget from "../components/TurnstileWidget.astro";
         identifierInput?.addEventListener("input", (e) => {
             const input = e.target as HTMLInputElement;
             let value = input.value;
-            if (value.includes('@')) return;
+            // Se contiver qualquer letra ou arroba, tratamos como email e não aplicamos a máscara de CPF
+            if (/[a-zA-Z@]/.test(value)) return;
 
             let digits = value.replace(/\D/g, '');
             if (digits.length <= 11) {
