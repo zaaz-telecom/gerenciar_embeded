@@ -59,9 +59,11 @@ export const POST: APIRoute = async ({ request }) => {
             if (error) throw error;
             resultData = data;
         } else {
-            // Invite User (Email link)
-            const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
-                data: {
+            // Create User without Password (Silently, without confirming and without sending automatic email)
+            const { data, error } = await supabaseAdmin.auth.admin.createUser({
+                email,
+                email_confirm: false,
+                user_metadata: {
                     organization_id,
                     full_name: fullName,
                     role: role || 'user',
@@ -82,7 +84,7 @@ export const POST: APIRoute = async ({ request }) => {
 
         // Send Welcome Email with password setup link — this activates the account
         if (sendWelcome) {
-            const baseUrl = import.meta.env.PUBLIC_SITE_URL || 'https://mis.online.net.br';
+            const baseUrl = new URL(request.url).origin;
             
             // If user was created with password, they are auto-confirmed. Use recovery for the link.
             const { data: resetData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({

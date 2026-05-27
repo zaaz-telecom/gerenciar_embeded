@@ -32,7 +32,7 @@ export const POST: APIRoute = async ({ request }) => {
             );
         }
 
-        const baseUrl = import.meta.env.PUBLIC_SITE_URL || 'https://mis.online.net.br';
+        const baseUrl = new URL(request.url).origin;
 
         // Generate a recovery link via Supabase Admin API
         const { data: resetData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
@@ -55,9 +55,12 @@ export const POST: APIRoute = async ({ request }) => {
             );
         }
 
-        const resetUrl = resetData?.properties?.action_link || '';
+        const actionLink = resetData?.properties?.action_link || '';
+        const resetUrl = actionLink 
+            ? `${baseUrl}/auth/confirm?token_url=${encodeURIComponent(actionLink)}`
+            : `${baseUrl}/login`;
 
-        if (resetUrl) {
+        if (actionLink) {
             // Send the branded email via Resend instead of Supabase's built-in
             await sendPasswordResetEmail(
                 email.trim().toLowerCase(),
