@@ -3,21 +3,26 @@ import AppLayout from "../layouts/AppLayout.astro";
 import TurnstileWidget from "../components/TurnstileWidget.astro";
 import { supabaseAdmin } from "../lib/supabase";
 
+let host = "";
+if (supabaseAdmin) {
+    const urlObj = new URL(Astro.request.url);
+    let requestHost = Astro.request.headers.get("x-forwarded-host") || Astro.request.headers.get("host") || "";
+    if (requestHost.includes(":")) requestHost = requestHost.split(":")[0];
+    host = requestHost.replace(/^www\./, "");
+    if (urlObj.searchParams.get("tenant") === "zaaz") host = "bi.zaaztelecom.com.br";
+    if (urlObj.searchParams.get("tenant") === "online") host = "online.net.br";
+}
+
+const isZaazDomain = host.toLowerCase().includes("zaaz");
+
 let org = {
-    name: "MIS",
-    logo_url: "/favicon.png",
-    subtitle: "Manager Operation Systems"
+    name: isZaazDomain ? "ZaaZ Telecom" : "MIS",
+    logo_url: isZaazDomain ? "/assets/brands/zaaz/logo-light.png" : "/favicon.png",
+    subtitle: isZaazDomain ? "DEPARTAMENTO DE PLANEJAMENTO E CONTROLE" : "Manager Operation Systems"
 };
 
 // Check if we are rendering on the server and have access to supabaseAdmin
-if (supabaseAdmin) {
-    let host = Astro.request.headers.get("x-forwarded-host") || Astro.request.headers.get("host") || "";
-    if (host.includes(":")) host = host.split(":")[0]; // Strip port for DB matching
-
-    const urlObj = new URL(Astro.request.url);
-    if (urlObj.searchParams.get("tenant") === "zaaz") host = "bi.zaaztelecom.com.br";
-    if (urlObj.searchParams.get("tenant") === "online") host = "online.net.br";
-
+if (supabaseAdmin && host) {
     const { data } = await supabaseAdmin
         .from("organization_domains")
         .select(`
